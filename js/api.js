@@ -115,7 +115,7 @@ export async function loadTableDataFromServer(db, table) {
             `&sorts=${encodeURIComponent(sStr)}`;
 
         // 4. Fetch the data from the server
-        const res = await fetch(`${this.apiUrl}?action=data&db=${encodeURIComponent(db)}&table=${encodeURIComponent(table)}`);
+        const res = await fetch(url); // Use the constructed url
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.error || 'Failed to fetch table data');
@@ -258,6 +258,7 @@ export async function saveCell(rowIndex, colIndex, el) {
             el.style.backgroundColor = 'rgba(62, 207, 142, 0.2)';
             setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
         }
+        this.renderPanel();
         this.showMsg(`Updated ${colName} successfully`);
     } catch (err) {
         // Revert the value if it fails

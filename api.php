@@ -172,7 +172,7 @@ try {
                 $refCols = $refColsStmt->fetchAll(PDO::FETCH_ASSOC);
                 $displayCol = $refCol;
                 foreach ($refCols as $rc) {
-                    if (in_array(strtolower($rc['Field']), ['name', 'title', 'label', 'description', 'email'])) {
+                    if (in_array(strtolower($rc['Field']), ['name', 'name_kh', 'name_en', 'title', 'label', 'description', 'email'])) {
                         $displayCol = $rc['Field'];
                         break;
                     }

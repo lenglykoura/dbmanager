@@ -360,13 +360,34 @@ export function renderPanel() {
         // Check if this specific column has foreign key options loaded from the API
         const fkOpts = (window._dbm.APP.fkOptions && window._dbm.APP.fkOptions[window._dbm.S.table]) ? window._dbm.APP.fkOptions[window._dbm.S.table][colDef.n] : null;
 
+        // if (fkOpts) {
+        //   // Find the descriptive label (e.g. "Admin") for the current ID (e.g. "1")
+        //   const opt = fkOpts.find(o => String(o.val) === String(c));
+        //   const displayLabel = opt ? opt.label : (c !== null ? c : '');
+
+        //   return `<td 
+        //       style="outline:none; color:var(--purple); cursor:pointer; min-width:140px;" 
+        //       ondblclick="
+        //           this.innerHTML = '<input type=\\'text\\' list=\\'fk-list-${colDef.n}\\' value=\\'${c !== null ? c : ''}\\' onblur=\\'window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)\\' onkeydown=\\'if(event.key === \\'Enter\\') { event.preventDefault(); this.blur(); }\\' style=\\'width:100%; height:100%; padding:8px 12px; background:var(--bg2); border:none; outline:none; color:inherit; font-family:inherit; font-size:inherit;\\'>';
+        //           this.querySelector('input').focus();
+        //       "
+        //       title="Double-click to select"
+        //   >${displayLabel}</td>`;
+        // }
+
         if (fkOpts) {
-          return `<td style="padding:0; min-width:140px;">
-              <input type="text" list="fk-list-${colDef.n}" value="${c !== null ? c : ''}" 
-                  onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)"
-                  onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
-                  style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit;">
-          </td>`;
+          // Find the label (e.g., "Admin") for the current value (e.g., "1")
+          const opt = fkOpts.find(o => String(o.val) === String(c));
+          const displayLabel = opt ? opt.label : (c !== null ? c : '');
+
+          return `<td 
+              style="outline:none; color:var(--purple); cursor:pointer; min-width:140px;" 
+              ondblclick="
+                  this.innerHTML = '<input type=\\'text\\' list=\\'fk-list-${colDef.n}\\' value=\\'${c !== null ? c : ''}\\' onblur=\\'window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)\\' onkeydown=\\'if(event.key === \\'Enter\\') { event.preventDefault(); this.blur(); }\\' style=\\'width:100%; height:100%; padding:8px 12px; background:var(--bg2); border:none; outline:none; color:inherit; font-family:inherit; font-size:inherit;\\'>';
+                  this.querySelector('input').focus();
+              "
+              title="Double-click to select"
+          >${displayLabel}</td>`;
         }
 
         // --- 2. ENUM DROPDOWN LOGIC ---

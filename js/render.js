@@ -587,33 +587,27 @@ export function renderPanel() {
 
     let resHtml = '';
     if (this.S.queryResult) {
-      // --- NEW: Client-side pagination logic ---
-      const totalRows = this.S.queryResult.length;
-      const totalPages = Math.ceil(totalRows / this.S.perPage);
+      // --- FIX: Use the REAL total from the backend count ---
+      const total = this.S.totalRows || 0;
+      const totalPages = Math.ceil(total / this.S.perPage);
 
-      // Safety bounds check
-      if (this.S.page > totalPages && totalPages > 0) this.S.page = totalPages;
-      if (this.S.page < 1) this.S.page = 1;
-
-      const start = (this.S.page - 1) * this.S.perPage;
-      const pagedResults = this.S.queryResult.slice(start, start + this.S.perPage);
+      const startCount = total === 0 ? 0 : (this.S.page - 1) * this.S.perPage + 1;
+      const endCount = Math.min(this.S.page * this.S.perPage, total);
 
       resHtml = `
           <div style="margin-top:24px;">
-            
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                  <div class="section-title" style="margin:0;">Result <span class="badge">${totalRows} rows</span></div>
-                  
+                  <div class="section-title" style="margin:0;">Result <span class="badge">${total.toLocaleString()} rows</span></div>
                   <div style="display:flex; gap:8px;">
                       <button class="btn success" onclick="window._dbm.exportQuery('csv')">↓ Export CSV</button>
                       <button class="btn amber" onclick="window._dbm.exportQuery('json')">↓ Export JSON</button>
                   </div>
               </div>
 
-              ${totalRows > 0 ? `
+              ${total > 0 ? `
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                   <div style="font-size:11px; color:var(--text2)">
-                      Showing ${start + 1} to ${Math.min(start + this.S.perPage, totalRows)} of ${totalRows} entries
+                      Showing ${startCount.toLocaleString()} to ${endCount.toLocaleString()} of ${total.toLocaleString()} rows
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
                       <button class="btn" onclick="window._dbm.changePage(-1)" ${this.S.page <= 1 ? 'disabled' : ''}>← Prev</button>
@@ -631,8 +625,7 @@ export function renderPanel() {
               <div class="tbl-wrapper">
                   <table class="data-tbl">
                       <thead><tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-                      
-                      <tbody>${pagedResults.map(r => `<tr>${r.map(c => `<td>${c !== null ? c : '<span class="null-val">NULL</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
+                      <tbody>${this.S.queryResult.map(r => `<tr>${r.map(c => `<td>${c !== null ? c : '<span class="null-val">NULL</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
                   </table>
               </div>
           </div>`;

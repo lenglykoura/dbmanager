@@ -88,10 +88,9 @@ export async function loadDatabasesFromServer() {
 export async function loadTableDataFromServer(db, table) {
     if (!db || !table) return;
 
-    // --- NEW: Show loading screen immediately ---
+    // 1. Show loading screen immediately to the user
     const panel = document.getElementById('panel');
     if (panel) {
-        // Uses the same CSS spinner we added previously, just scaled up a bit
         panel.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; color:var(--text2); font-family:var(--font-mono);">
                 <div class="spinner" style="width:24px; height:24px; border-width:3px; margin-bottom:16px;"></div>
@@ -100,9 +99,30 @@ export async function loadTableDataFromServer(db, table) {
     }
 
     try {
-        const res = await fetch(`${this.apiUrl}?action=data&db=${encodeURIComponent(db)}&table=${encodeURIComponent(table)}`);
+        // 2. Prepare Filter and Sort parameters for the URL
+        // We stringify these arrays so they can be sent as single URL parameters
+        const fStr = JSON.stringify(this.S.appliedFilters || []);
+        const sStr = JSON.stringify(this.S.appliedSorts || []);
+
+        // 3. Construct the API URL with all necessary parameters
+        const url = `${this.apiUrl}?action=data` +
+            `&db=${encodeURIComponent(db)}` +
+            `&table=${encodeURIComponent(table)}` +
+            `&page=${this.S.page}` +
+            `&per_page=${this.S.perPage}` +
+            `&filters=${encodeURIComponent(fStr)}` +
+            `&sorts=${encodeURIComponent(sStr)}`;
+
+        // 4. Fetch the data from the server
+        const res = await fetch(url);
         const data = await res.json();
 
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch table data');
+
+        // 5. Store the actual database count for the pagination UI
+        this.S.totalRows = data.totalRows || 0;
+
+        // 6. Map the column definitions (Schema)
         this.APP.schemas[table] = data.schema.map(col => ({
             n: col.Field,
             t: col.Type,
@@ -113,16 +133,32 @@ export async function loadTableDataFromServer(db, table) {
             collate: col.Collation,
             comment: col.Comment
         }));
-        this.APP.colHeaders[table] = data.schema.map(col => col.Field);
-        this.APP.tableData[table] = data.data.map(row => this.APP.colHeaders[table].map(key => row[key]));
 
-        // Once the data finishes parsing, this redraws the UI and removes the loading screen
+        // 7. Store column headers and the paginated row data
+        this.APP.colHeaders[table] = data.schema.map(col => col.Field);
+        this.APP.tableData[table] = data.data.map(row =>
+            this.APP.colHeaders[table].map(key => row[key])
+        );
+
+        // 8. Store Foreign Key options for dropdown menus
+        if (!this.APP.fkOptions) this.APP.fkOptions = {};
+        this.APP.fkOptions[table] = data.fks || {};
+
+        // 9. Refresh the UI components
         this.renderSidebar();
         this.renderPanel();
         this.updateStatus();
+
     } catch (error) {
         console.error(error);
-        if (panel) panel.innerHTML = `<div style="padding:24px; color:#ef4444;">Failed to load table data: ${error.message}</div>`;
+        if (panel) {
+            panel.innerHTML = `
+                <div style="padding:24px; color:var(--red); font-family:var(--font-mono);">
+                    <strong>Database Error:</strong><br>
+                    ${error.message}
+                </div>`;
+        }
+        this.showMsg(error.message, "error");
     }
 }
 

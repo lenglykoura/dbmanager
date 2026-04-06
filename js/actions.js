@@ -35,8 +35,10 @@ export function updateSort(id, field, value) {
 export function applyQueryBuilder() {
     this.S.appliedFilters = JSON.parse(JSON.stringify(this.S.filters));
     this.S.appliedSorts = JSON.parse(JSON.stringify(this.S.sorts));
-    this.S.page = 1;
-    this.renderPanel();
+    this.S.page = 1; // Reset to page 1 for the new results
+
+    // NEW: Re-fetch filtered data from server
+    this.loadTableDataFromServer(this.S.db, this.S.table);
 }
 
 export function toggleRow(idx) {
@@ -126,17 +128,16 @@ export function exportSelected(format) {
 
 export function changePage(delta) {
     this.S.page += delta;
-    // --- NEW: Trigger server fetch ---
+    // --- NEW: Call the server to get the next page ---
     this.loadTableDataFromServer(this.S.db, this.S.table);
 }
 
 export function setPerPage(val) {
     this.S.perPage = parseInt(val);
     this.S.page = 1;
-    // --- NEW: Trigger server fetch ---
+    // --- NEW: Call the server to refresh data with the new limit ---
     this.loadTableDataFromServer(this.S.db, this.S.table);
 }
-
 export function selectDb(db) {
     this.S.db = db;
     this.S.table = this.APP.databases[db].tables[0] || '';

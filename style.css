@@ -521,7 +521,7 @@ table.data-tbl {
   text-align: left;
   padding: 9px 12px;
   font-size: 10px;
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   letter-spacing: 0.8px;
   color: var(--text2);
   font-weight: 500;
@@ -654,6 +654,43 @@ table.data-tbl {
 .sql-dot.g {
   background: #3ecf8e;
 }
+body.light-theme {
+  /* Crisp, cool grays for the layout */
+  --bg0: #f8fafc; /* Main app background */
+  --bg1: #ffffff; /* Navbar, Sidebar, and Cards (Pure White) */
+  --bg2: #f1f5f9; /* Inputs and Hover states */
+  --bg3: #e2e8f0; /* Active tab states */
+  --bg4: #cbd5e1;
+  
+  --line: #e2e8f0;
+  --line2: #cbd5e1;
+  
+  /* High contrast text */
+  --text0: #0f172a; /* Deep slate/black */
+  --text1: #334155; 
+  --text2: #64748b; 
+  --text3: #94a3b8; 
+  
+  /* CRITICAL FIX: Darker semantic colors for a white background */
+  --accent: #2563eb; /* Deeper Blue */
+  --green: #16a34a;  /* Darker Green for the Navbar Connection Pill */
+  --red: #dc2626;    /* Darker Red for the Logout Button / Delete */
+  --amber: #d97706;  
+  --cyan: #0891b2;
+  --purple: #7c3aed;
+}
+
+/* Add a subtle shadow to the top navbar and sidebar in light mode for depth */
+body.light-theme #topbar {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-bottom: 1px solid var(--line);
+}
+
+body.light-theme #sidebar {
+  box-shadow: 1px 0 3px rgba(0,0,0,0.03);
+}
+
+/* --- Find this and fix the hardcoded color --- */
 textarea.sql-editor {
   width: 100%;
   min-height: 120px;
@@ -662,7 +699,10 @@ textarea.sql-editor {
   padding: 16px;
   background: var(--bg1);
   border: none;
-  color: #c8d3f5;
+  
+  /* CHANGE THIS LINE: */
+  color: var(--text0); 
+  
   outline: none;
   resize: vertical;
   line-height: 1.7;
@@ -936,6 +976,36 @@ textarea.sql-editor {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* 1. Highlight text cells when clicking to edit */
+.data-tbl td[contenteditable="true"]:focus {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px;
+  background: var(--bg2) !important;
+  border-radius: 2px;
+  caret-color: var(--accent); /* Makes the blinking cursor blue */
+}
+
+/* 2. Highlight dropdown cells when clicked */
+.data-tbl td:has(select:focus) {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px;
+  background: var(--bg2) !important;
+  border-radius: 2px;
+}
+
+/* Ensure the select itself doesn't have a double outline */
+.data-tbl td select:focus {
+  outline: none !important;
+  background: var(--bg2) !important;
 }

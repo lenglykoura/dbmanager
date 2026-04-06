@@ -47,16 +47,42 @@ export async function loadDatabasesFromServer() {
             this.APP.databases[dbName] = { tables: tblData.tables };
         }
 
-        const firstDb = Object.keys(this.APP.databases)[0];
+        const dbNames = Object.keys(this.APP.databases);
+        const firstDb = dbNames[0];
+
+        // 1. VALIDATE SAVED STATE: Check if saved db and table still exist on the server
+        if (this.S.db && !this.APP.databases[this.S.db]) {
+            this.S.db = ''; // Reset if DB was deleted
+            this.S.table = '';
+        } else if (this.S.db && this.S.table && !this.APP.databases[this.S.db].tables.includes(this.S.table)) {
+            this.S.table = ''; // Reset if Table was deleted
+        }
+
+        // 2. DEFAULT TO FIRST: Only if NO DB is selected from localStorage (or it was reset above)
         if (firstDb && !this.S.db) {
             this.S.db = firstDb;
             this.S.table = this.APP.databases[firstDb].tables[0] || '';
             this.S.expandedDbs.add(firstDb);
         }
 
-        if (this.S.db && this.S.table) await this.loadTableDataFromServer(this.S.db, this.S.table);
-        else { this.renderSidebar(); this.renderPanel(); }
-    } catch (error) { console.error(error); }
+        // 3. Always ensure the active DB folder is physically expanded in the sidebar
+        if (this.S.db) this.S.expandedDbs.add(this.S.db);
+
+        // 4. Save verified state back to storage
+        if (typeof this.saveLocalState === 'function') {
+            this.saveLocalState();
+        }
+
+        // 5. Finally, load the data or just render the shell
+        if (this.S.db && this.S.table) {
+            await this.loadTableDataFromServer(this.S.db, this.S.table);
+        } else {
+            this.renderSidebar();
+            this.renderPanel();
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 export async function loadTableDataFromServer(db, table) {
@@ -123,8 +149,15 @@ export async function saveCell(rowIndex, colIndex, el) {
     const schema = this.APP.schemas[table];
     const headers = this.APP.colHeaders[table];
 
-    let newValue = el.innerText.trim();
-    if (newValue === '') newValue = null;
+    // Determine how to get the value based on the HTML element type
+    let newValue;
+    if (el.tagName === 'SELECT') {
+        newValue = el.value;
+        if (newValue === '') newValue = null;
+    } else {
+        newValue = el.innerText.trim();
+        if (newValue === '') newValue = null;
+    }
 
     const oldValue = this.APP.tableData[table][rowIndex][colIndex];
     if (String(newValue) === String(oldValue) || (newValue === null && oldValue === null)) return;
@@ -132,7 +165,8 @@ export async function saveCell(rowIndex, colIndex, el) {
     const pkColIndex = schema.findIndex(c => c.x === 'PK');
     if (pkColIndex === -1) {
         this.showMsg("Cannot edit: Table has no Primary Key", "error");
-        el.innerText = oldValue !== null ? oldValue : '';
+        if (el.tagName === 'SELECT') el.value = oldValue !== null ? oldValue : '';
+        else el.innerText = oldValue !== null ? oldValue : '';
         return;
     }
 
@@ -141,7 +175,8 @@ export async function saveCell(rowIndex, colIndex, el) {
     const colName = headers[colIndex];
 
     try {
-        el.style.backgroundColor = 'rgba(245, 166, 35, 0.2)';
+        if (el.tagName !== 'SELECT') el.style.backgroundColor = 'rgba(245, 166, 35, 0.2)';
+
         const res = await fetch(`${this.apiUrl}?action=update_cell`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -152,13 +187,21 @@ export async function saveCell(rowIndex, colIndex, el) {
         if (!res.ok) throw new Error(data.error);
 
         this.APP.tableData[table][rowIndex][colIndex] = newValue;
-        el.style.backgroundColor = 'rgba(62, 207, 142, 0.2)';
-        setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+
+        if (el.tagName !== 'SELECT') {
+            el.style.backgroundColor = 'rgba(62, 207, 142, 0.2)';
+            setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+        }
         this.showMsg(`Updated ${colName} successfully`);
     } catch (err) {
-        el.innerText = oldValue !== null ? oldValue : '';
-        el.style.backgroundColor = 'rgba(240, 82, 82, 0.2)';
-        setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+        // Revert the value if it fails
+        if (el.tagName === 'SELECT') {
+            el.value = oldValue !== null ? oldValue : '';
+        } else {
+            el.innerText = oldValue !== null ? oldValue : '';
+            el.style.backgroundColor = 'rgba(240, 82, 82, 0.2)';
+            setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+        }
         this.showMsg(err.message, 'error');
     }
 }

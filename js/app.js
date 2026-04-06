@@ -7,15 +7,24 @@ class DBManager {
     this.container = document.getElementById(containerId);
     this.apiUrl = apiUrl;
 
+    const savedState = JSON.parse(localStorage.getItem('dbm_state') || '{}');
+    const savedExpanded = JSON.parse(localStorage.getItem('dbm_expanded') || '[]');
     // Application State
     this.S = {
-      db: '', table: '', tab: 'browse', page: 1, perPage: 15,
+      db: savedState.db || '',
+      table: savedState.table || '',
+      tab: savedState.tab || 'browse',
+      sidebarOpen: savedState.sidebarOpen !== false,
+      theme: savedState.theme || 'dark',
+      logs: [],
+      terminalOpen: savedState.terminalOpen !== false,
+      page: 1, perPage: 15,
       queryResult: null, queryHeaders: [], msg: null, msgType: 'success',
       isLoggedIn: false, user: 'root', host: 'localhost:3306',
-      expandedDbs: new Set(), selected: new Set(),
+      expandedDbs: new Set(savedExpanded), selected: new Set(),
       showBuilder: false, filters: [], appliedFilters: [], sorts: [], appliedSorts: []
     };
-
+    if (this.S.theme === 'light') document.body.classList.add('light-theme');
     this.APP = { databases: {}, schemas: {}, tableData: {}, colHeaders: {} };
     window._dbm = this;
 

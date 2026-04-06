@@ -71,14 +71,44 @@ try {
             $db = $_GET['db'] ?? '';
             $table = $_GET['table'] ?? '';
 
-            // UPGRADE: Use FULL COLUMNS to get Collation, Privileges, and Comments
             $stmtSchema = $pdo->query("SHOW FULL COLUMNS FROM `$db`.`$table`");
-            $schema = $stmtSchema->fetchAll();
+            $schema = $stmtSchema->fetchAll(PDO::FETCH_ASSOC);
 
             $stmtData = $pdo->query("SELECT * FROM `$db`.`$table` LIMIT 1000");
-            $data = $stmtData->fetchAll();
+            $data = $stmtData->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['schema' => $schema, 'data' => $data]);
+            // --- NEW: Fetch Foreign Keys and Dropdown Options ---
+            $fkStmt = $pdo->prepare("
+                SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE REFERENCED_TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
+            ");
+            $fkStmt->execute([$db, $table]);
+            $fks = $fkStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $fkOptions = [];
+            foreach ($fks as $fk) {
+                $colName = $fk['COLUMN_NAME'];
+                $refTable = $fk['REFERENCED_TABLE_NAME'];
+                $refCol = $fk['REFERENCED_COLUMN_NAME'];
+
+                // Smart Feature: Try to find a 'name' or 'title' column for better labels
+                $refColsStmt = $pdo->query("SHOW COLUMNS FROM `$db`.`$refTable`");
+                $refCols = $refColsStmt->fetchAll(PDO::FETCH_ASSOC);
+                $displayCol = $refCol;
+                foreach ($refCols as $rc) {
+                    if (in_array(strtolower($rc['Field']), ['name', 'title', 'label', 'description', 'email'])) {
+                        $displayCol = $rc['Field'];
+                        break;
+                    }
+                }
+
+                // Fetch the options from the related table (e.g. ID and Name)
+                $optsStmt = $pdo->query("SELECT `$refCol` as val, `$displayCol` as label FROM `$db`.`$refTable` LIMIT 1000");
+                $fkOptions[$colName] = $optsStmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            echo json_encode(['schema' => $schema, 'data' => $data, 'fks' => $fkOptions]);
             break;
         case 'update_cell':
             $pdo = getDB();

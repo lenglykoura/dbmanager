@@ -55,9 +55,43 @@ export function closeAlertDialog() {
 }
 
 export function showMsg(m, t = 'success') {
-  this.S.msg = m; this.S.msgType = t;
-  this.renderPanel();
-  setTimeout(() => { this.S.msg = null; this.renderPanel(); }, 4000);
+  if (!this.S.logs) this.S.logs = [];
+
+  // Get time in HH:MM:SS format
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+  this.S.logs.push({ time, msg: m, type: t });
+
+  // --- NEW: Auto-expand the terminal if it is currently hidden ---
+  if (!this.S.terminalOpen) {
+    // Calling your toggle function will flip the state to true and trigger the CSS animation
+    if (typeof this.toggleTerminal === 'function') {
+      this.toggleTerminal();
+    } else {
+      this.S.terminalOpen = true;
+    }
+  }
+
+  this.renderTerminal();
+}
+
+export function renderTerminal() {
+  const body = document.getElementById('term-body');
+  if (!body) return;
+
+  body.innerHTML = (this.S.logs || []).map(l => `
+        <div style="margin-bottom: 6px; color: ${l.type === 'error' ? '#ef4444' : '#10b981'};">
+            <span style="color:#64748b; margin-right:8px; font-size:10px;">[${l.time}]</span> 
+            <span style="font-family:var(--font-mono);">${l.msg}</span>
+        </div>
+    `).join('');
+
+  // Auto-scroll to the newest message at the bottom
+  body.scrollTop = body.scrollHeight;
+}
+
+export function clearTerminal() {
+  this.S.logs = [];
+  this.renderTerminal();
 }
 
 export function updateStatus() {
@@ -90,24 +124,52 @@ export function renderShell() {
     this.container.innerHTML = `
           <div id="shell">
             <div id="topbar">
+              <button class="top-btn" style="padding:6px; margin-right:4px; border:none; background:transparent;" onclick="window._dbm.toggleSidebar()" title="Toggle Sidebar">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
+              
               <div class="brand">DB<em>Manager</em></div>
               <div class="conn-pill"><div class="conn-dot"></div><span id="conn-label">${this.S.user}@${this.S.host}</span></div>
+              
               <div class="top-spacer"></div>
+
+              <button class="top-btn" id="theme-toggle-btn" style="padding:6px; margin-right:8px; border:none; background:transparent;" onclick="window._dbm.toggleTheme()" title="Toggle Theme">
+                  ${this.S.theme === 'dark'
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+      }
+              </button>
+
               <button class="top-btn" onclick="window._dbm.showTab('sql')">Query</button>
               <button class="top-btn danger" onclick="window._dbm.doLogout()">Logout</button>
             </div>
             <div id="main">
-              <div id="sidebar">
+              <div id="sidebar" style="display: ${this.S.sidebarOpen ? 'flex' : 'none'};">
                 <div class="sidebar-header"><input class="sidebar-search" placeholder="Search tables…" oninput="window._dbm.renderSidebar(this.value)" /></div>
                 <div class="sidebar-scroll" id="sidebar-content"></div>
               </div>
-              <div id="content">
-                <div id="tabbar">
-                  <div class="tab active" id="tab-browse" onclick="window._dbm.showTab('browse')">▤ Browse</div>
-                  <div class="tab" id="tab-structure" onclick="window._dbm.showTab('structure')">⊞ Structure</div>
-                  <div class="tab" id="tab-sql" onclick="window._dbm.showTab('sql')">❯ SQL</div>
+              <div id="content" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                <div id="tabbar" style="flex-shrink: 0;">
+                  <div class="tab ${this.S.tab === 'browse' ? 'active' : ''}" id="tab-browse" onclick="window._dbm.showTab('browse')">▤ Browse</div>
+                  <div class="tab ${this.S.tab === 'structure' ? 'active' : ''}" id="tab-structure" onclick="window._dbm.showTab('structure')">⊞ Structure</div>
+                  <div class="tab ${this.S.tab === 'sql' ? 'active' : ''}" id="tab-sql" onclick="window._dbm.showTab('sql')">❯ SQL</div>
                 </div>
-                <div id="panel"></div>
+                
+                <div id="panel" style="flex: 1; overflow-y: auto;"></div>
+                
+                <div id="terminal-wrapper" style="height: ${this.S.terminalOpen ? '180px' : '32px'}; flex-shrink: 0; background: #0f172a; border-top: 1px solid var(--line); display: flex; flex-direction: column; transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);">
+                    <div style="background: #020617; color: #94a3b8; padding: 0 16px; font-size: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; text-transform: uppercase; letter-spacing: 0.5px; height: 32px; box-sizing: border-box;">
+                        
+                        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; height: 100%; flex: 1;" onclick="window._dbm.toggleTerminal()">
+                            <span id="term-toggle-btn" style="font-size: 10px;">${this.S.terminalOpen ? '▼' : '▲'}</span>
+                            <span>>_ Console Output</span>
+                        </div>
+                        
+                        <button onclick="window._dbm.clearTerminal(); event.stopPropagation();" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 10px; padding: 4px 8px;">Clear</button>
+                    </div>
+                    
+                    <div id="term-body" style="flex: 1; overflow-y: auto; padding: 12px 16px; font-size: 12px; display: ${this.S.terminalOpen ? 'block' : 'none'};"></div>
+                </div>
               </div>
             </div>
             <div id="statusbar">
@@ -117,6 +179,7 @@ export function renderShell() {
             </div>
           </div>`;
     this.renderSidebar();
+    this.renderTerminal(); // Ensure terminal logs are drawn on initial load
   }
 }
 
@@ -224,6 +287,7 @@ export function renderPanel() {
       const r = item.row;
       const actualRowIndex = item.originalIndex;
       const isSelected = this.S.selected.has(actualRowIndex);
+
       return `<tr style="${isSelected ? 'background: var(--accent-dim2);' : ''}">
             <td style="width:34px;text-align:center;">
               <input type="checkbox" onchange="window._dbm.toggleRow(${actualRowIndex})" ${isSelected ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);" />
@@ -231,7 +295,64 @@ export function renderPanel() {
             <td style="color:var(--text3); font-size:10px;">${start + localIdx + 1}</td>
             ${r.map((c, cIdx) => {
         const isPk = cIdx === pkIndex;
-        return `<td ${!isPk ? `contenteditable="true" spellcheck="false" style="outline:none; transition: background 0.3s;" onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" title="Click to edit"` : 'style="opacity:0.6; cursor:not-allowed;" title="Primary Key"'} >${c !== null ? c : ''}</td>`;
+        const colDef = schema[cIdx];
+        const tLower = (colDef.t || '').toLowerCase();
+
+        // --- 1. FOREIGN KEY DROPDOWN LOGIC ---
+        // Check if this specific column has foreign key options loaded from the API
+        const fkOpts = (window._dbm.APP.fkOptions && window._dbm.APP.fkOptions[window._dbm.S.table]) ? window._dbm.APP.fkOptions[window._dbm.S.table][colDef.n] : null;
+
+        if (fkOpts) {
+          const optionsHtml = fkOpts.map(opt => {
+            // Show "1 - Admin" if there's a label, otherwise just show "1"
+            const display = opt.val === opt.label ? opt.val : `${opt.val} - ${opt.label}`;
+            return `<option value="${opt.val}" ${String(c) === String(opt.val) ? 'selected' : ''}>${display}</option>`;
+          }).join('');
+
+          return `<td style="padding:0; min-width:140px;">
+                      <select onchange="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit; cursor:pointer; -webkit-appearance:none;">
+                          ${colDef.null ? `<option value="" ${c === null ? 'selected' : ''}>[NULL]</option>` : ''}
+                          ${optionsHtml}
+                      </select>
+                  </td>`;
+        }
+
+        // --- 2. ENUM DROPDOWN LOGIC ---
+        if (tLower.startsWith('enum')) {
+          const match = colDef.t.match(/^enum\((.*)\)$/i);
+          let optionsHtml = '';
+          if (match) {
+            // Safely parse the enum string e.g. 'admin','user'
+            const opts = match[1].match(/'([^']*)'/g) || [];
+            optionsHtml = opts.map(o => {
+              const val = o.slice(1, -1);
+              return `<option value="${val}" ${c === val ? 'selected' : ''}>${val}</option>`;
+            }).join('');
+          }
+
+          return `<td style="padding:0;">
+                        <select onchange="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:inherit; font-family:inherit; font-size:inherit; cursor:pointer; -webkit-appearance:none;">
+                            ${colDef.null ? `<option value="" ${c === null ? 'selected' : ''}>[NULL]</option>` : ''}
+                            ${optionsHtml}
+                        </select>
+                    </td>`;
+        }
+
+        // --- 3. FORMATTING BY DATATYPE LOGIC ---
+        const isNumeric = tLower.includes('int') || tLower.includes('decimal') || tLower.includes('float') || tLower.includes('double');
+        const align = isNumeric ? 'right' : 'left'; // Align numbers to the right
+
+        // --- AUTO-SAVE ON BLUR & ENTER KEY LOGIC ---
+        return `<td ${!isPk ?
+          `contenteditable="true" 
+             spellcheck="false" 
+             style="outline:none; text-align:${align}; transition: background 0.3s;" 
+             onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" 
+             onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }" 
+             title="Click to edit"`
+          :
+          `style="opacity:0.6; cursor:not-allowed; text-align:${align};" title="Primary Key"`
+          }>${c !== null ? c : ''}</td>`;
       }).join('')}
           </tr>`;
     }).join('');
@@ -305,7 +426,7 @@ export function renderPanel() {
   
           <div class="toolbar" style="margin-bottom: 14px; display: flex; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 14px;">
               <button class="btn danger" onclick="window._dbm.deleteSelected()" ${this.S.selected.size === 0 ? 'disabled' : ''}>✕ Delete (${this.S.selected.size})</button>
-              <button class="btn" onclick="window._dbm.copySelected()" ${this.S.selected.size === 0 ? 'disabled' : ''}>⎘ Copy Selected</button>
+          
               <div style="margin-left: auto; display: flex; gap: 8px;">
                   <button class="btn success" onclick="window._dbm.exportSelected('csv')">↓ Export CSV</button>
                   <button class="btn amber" onclick="window._dbm.exportSelected('json')">↓ Export JSON</button>

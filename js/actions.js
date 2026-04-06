@@ -141,6 +141,9 @@ export function selectDb(db) {
     this.S.page = 1; this.S.selected.clear();
     this.S.filters = []; this.S.appliedFilters = [];
     this.S.sorts = []; this.S.appliedSorts = [];
+    this.S.currentIndexes = null;
+
+    this.saveLocalState(); // <-- NEW
 
     if (this.S.table) this.loadTableDataFromServer(this.S.db, this.S.table);
     else { this.renderSidebar(); this.renderPanel(); this.updateStatus(); }
@@ -151,13 +154,19 @@ export function selectTable(db, t) {
     this.S.selected.clear();
     this.S.filters = []; this.S.appliedFilters = [];
     this.S.sorts = []; this.S.appliedSorts = [];
+    this.S.currentIndexes = null;
     this.S.expandedDbs.add(db);
+
+    this.saveLocalState(); // <-- NEW
+
     this.loadTableDataFromServer(this.S.db, this.S.table);
 }
 
 export function toggleDb(db) {
     if (this.S.expandedDbs.has(db)) this.S.expandedDbs.delete(db);
     else this.S.expandedDbs.add(db);
+
+    this.saveLocalState(); // <-- NEW
     this.renderSidebar();
 }
 
@@ -165,92 +174,12 @@ export function showTab(tab) {
     this.S.tab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + tab)?.classList.add('active');
+
+    this.saveLocalState(); // <-- NEW
     this.renderPanel();
 }
 
 // ─── STRUCTURE CONTROL LOGIC ───────────────────────────────
-
-export function openAddColumnModal() {
-    // Create a dynamic modal
-    const modalHtml = `
-        <div id="col-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(2px);">
-            <div style="background:var(--bg1); border:1px solid var(--line2); border-radius:var(--radius-lg); padding:24px; width:400px; box-shadow:0 24px 64px rgba(0,0,0,0.5);">
-                <div style="font-family:var(--font-display); font-size:15px; font-weight:700; margin-bottom:18px;">＋ Add Column to ${this.S.table}</div>
-                
-                <div style="display:flex; flex-direction:column; gap:12px;">
-                    <div>
-                        <label style="font-size:10px; text-transform:uppercase; color:var(--text2);">Column Name</label>
-                        <input id="new-col-name" class="search-input" style="width:100%; margin-top:4px;" placeholder="e.g. phone_number" />
-                    </div>
-                    <div>
-                        <label style="font-size:10px; text-transform:uppercase; color:var(--text2);">Data Type</label>
-                        <select id="new-col-type" class="search-input" style="width:100%; margin-top:4px;">
-                            <option value="VARCHAR(255)">VARCHAR(255)</option>
-                            <option value="INT">INT</option>
-                            <option value="TEXT">TEXT</option>
-                            <option value="DATETIME">DATETIME</option>
-                            <option value="TINYINT(1)">BOOLEAN / TINYINT(1)</option>
-                            <option value="DECIMAL(10,2)">DECIMAL(10,2)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:10px; text-transform:uppercase; color:var(--text2);">Allow NULL?</label>
-                        <select id="new-col-null" class="search-input" style="width:100%; margin-top:4px;">
-                            <option value="1">Yes (NULL)</option>
-                            <option value="0">No (NOT NULL)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:10px; text-transform:uppercase; color:var(--text2);">Default Value (Optional)</label>
-                        <input id="new-col-default" class="search-input" style="width:100%; margin-top:4px;" placeholder="Leave blank for none" />
-                    </div>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
-                    <button class="btn" onclick="document.getElementById('col-modal-overlay').remove()">Cancel</button>
-                    <button class="btn primary" onclick="window._dbm.submitAddColumn()">Add Column</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Append to body
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-export async function submitAddColumn() {
-    const colName = document.getElementById('new-col-name').value.trim();
-    const colType = document.getElementById('new-col-type').value;
-    const isNull = document.getElementById('new-col-null').value === '1';
-    const defaultVal = document.getElementById('new-col-default').value.trim();
-
-    if (!colName) return this.showMsg("Column name is required", "error");
-
-    try {
-        const res = await fetch(`${this.apiUrl}?action=add_column`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                db: this.S.db, table: this.S.table,
-                col_name: colName, col_type: colType,
-                is_null: isNull, default_val: defaultVal
-            })
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-
-        document.getElementById('col-modal-overlay').remove();
-        this.showMsg(`Column '${colName}' added successfully.`);
-
-        // Reload data to reflect new structure
-        await this.loadTableDataFromServer(this.S.db, this.S.table);
-    } catch (err) {
-        this.showMsg(err.message, "error");
-    }
-}
-
-// ─── ADVANCED STRUCTURE CONTROL LOGIC ───────────────────────────────
 
 export function openColumnEditor(colName = null) {
     const isEdit = !!colName;
@@ -263,7 +192,6 @@ export function openColumnEditor(colName = null) {
     if (isEdit) {
         const existing = schema.find(s => s.n === colName);
         if (existing) {
-            // Parse TYPE and LENGTH (e.g., "varchar(255)" or "enum('a','b')")
             const typeMatch = existing.t.match(/^([a-zA-Z]+)(?:\(([^)]+)\))?/);
             c.n = existing.n;
             c.t = typeMatch ? typeMatch[1].toUpperCase() : 'VARCHAR';
@@ -289,7 +217,6 @@ export function openColumnEditor(colName = null) {
         "JSON": ["JSON"]
     };
 
-    // Helper to generate the options HTML
     const typeOptionsHtml = Object.entries(datatypes).map(([group, types]) => `
         <optgroup label="${group}">
             ${types.map(t => `<option value="${t}" ${c.t === t ? 'selected' : ''}>${t}</option>`).join('')}
@@ -298,7 +225,7 @@ export function openColumnEditor(colName = null) {
 
     const modalHtml = `
         <div id="col-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(3px);">
-            <div style="background:var(--bg1); border:1px solid var(--line2); border-radius:var(--radius-lg); padding:24px; width:700px; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+            <div style="background:var(--bg1); border:1px solid var(--line2); color:var(--text0); border-radius:var(--radius-lg); padding:24px; width:700px; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
                 <div style="font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:20px;">
                     ${isEdit ? `Edit Column: <span style="color:var(--accent)">${colName}</span>` : `＋ Add Column to ${this.S.table}`}
                 </div>
@@ -313,8 +240,7 @@ export function openColumnEditor(colName = null) {
                     </div>
                     
                     <div><label style="font-size:10px; color:var(--text2);">Length/Values</label>
-                        <input id="ce-len" class="search-input" style="width:100%" value="${c.len}" placeholder="${c.t === 'ENUM' ? `e.g. \\'a\\',\\'b\\'` : 'e.g. 255 or 10,2'
-        } " />
+                        <input id="ce-len" class="search-input" style="width:100%" value="${c.len}" placeholder="${c.t === 'ENUM' ? `e.g. \\'a\\',\\'b\\'` : 'e.g. 255 or 10,2'} " />
                     </div >
                     
                     <div><label style="font-size:10px; color:var(--text2);">Default</label>
@@ -419,19 +345,22 @@ export async function submitColumnEditor(isEdit, oldName) {
 
         document.getElementById('col-modal-overlay').remove();
         this.showMsg(`Column successfully ${isEdit ? 'updated' : 'added'}.`);
+
+        // CRITICAL: Double refresh
         await this.loadTableDataFromServer(this.S.db, this.S.table);
+        await this.loadIndexes();
     } catch (err) {
         this.showMsg(err.message, "error");
     }
 }
 
 export async function dropColumn(colName) {
-    // 1. Use the custom confirmation dialog to ask before acting
     this.showConfirmDialog(
         "Drop Column",
         `Are you sure you want to DROP the column "${colName}"? All data in this column will be lost forever.`,
         async () => {
             try {
+                // FIXED TYPO: Removed spaces from URL
                 const res = await fetch(`${this.apiUrl}?action=drop_column`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -445,30 +374,44 @@ export async function dropColumn(colName) {
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Failed to drop column');
 
-                // 2. Show the custom success alert
                 this.showMsg(`Column "${colName}" was removed successfully.`);
 
-                // 3. CRITICAL: Refresh the data on the screen
-                // This re-fetches the updated schema and rows from api.php
+                // CRITICAL: Double refresh
                 await this.loadTableDataFromServer(this.S.db, this.S.table);
+                await this.loadIndexes();
 
             } catch (err) {
-                // Show the custom error alert if something goes wrong
-                this.showMsg("Database Error", err.message);
+                this.showMsg("Database Error", err.message, "error");
             }
         }
     );
 }
 
 export async function addIndex(colName, type) {
-    try {
-        await fetch(`${this.apiUrl}?action = add_index`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ db: this.S.db, table: this.S.table, col_name: colName, index_type: type })
-        });
-        this.showMsg(`Added ${type} index to ${colName}.`);
-        await this.loadTableDataFromServer(this.S.db, this.S.table);
-    } catch (err) { this.showMsg(err.message, "error"); }
+    this.showConfirmDialog(
+        "Add Index",
+        `Add a ${type} index to "${colName}"?`,
+        async () => {
+            try {
+                // FIXED TYPO: Removed spaces from URL
+                const res = await fetch(`${this.apiUrl}?action=add_index`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ db: this.S.db, table: this.S.table, col_name: colName, index_type: type })
+                });
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to add index');
+
+                this.showMsg(`Added ${type} index to ${colName}.`);
+
+                // CRITICAL: Double refresh
+                await this.loadTableDataFromServer(this.S.db, this.S.table);
+                await this.loadIndexes();
+            } catch (err) {
+                this.showMsg(err.message, "error");
+            }
+        }
+    );
 }
 
 export async function loadIndexes() {
@@ -479,16 +422,30 @@ export async function loadIndexes() {
 }
 
 export async function dropIndex(keyName) {
-    if (!confirm(`Are you sure you want to drop index '${keyName}'?`)) return;
-    try {
-        await fetch(`${this.apiUrl}?action=drop_index`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ db: this.S.db, table: this.S.table, key_name: keyName })
-        });
-        this.showMsg(`Index '${keyName}' dropped.`);
-        this.loadIndexes(); // Refresh list
-    } catch (err) { this.showMsg(err.message, "error"); }
+    this.showConfirmDialog(
+        "Drop Index",
+        `Are you sure you want to drop index '${keyName}'?`,
+        async () => {
+            try {
+                const res = await fetch(`${this.apiUrl}?action=drop_index`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ db: this.S.db, table: this.S.table, key_name: keyName })
+                });
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to drop index');
+
+                this.showMsg(`Index '${keyName}' dropped.`);
+
+                // CRITICAL: Double refresh
+                await this.loadTableDataFromServer(this.S.db, this.S.table);
+                await this.loadIndexes();
+            } catch (err) {
+                this.showMsg(err.message, "error");
+            }
+        }
+    );
 }
 
 export function openAddIndexModal() {
@@ -531,13 +488,12 @@ export async function submitIndex() {
     const col = document.getElementById('idx-col').value;
     const type = document.getElementById('idx-type').value;
 
-    // Use the custom confirmation instead of alert or immediate action
     this.showConfirmDialog(
         "Confirm Index",
         `Are you sure you want to add a ${type} index to the column "${col}"?`,
         async () => {
-            // This code runs ONLY if the user clicks "Yes"
             try {
+                // FIXED TYPO: Removed spaces from URL
                 const res = await fetch(`${this.apiUrl}?action=add_index`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -555,12 +511,78 @@ export async function submitIndex() {
                 const modal = document.getElementById('index-modal-overlay');
                 if (modal) modal.remove();
 
-                this.showAlertDialog("Success", `Index (${type}) added successfully.`, "success");
+                this.showMsg(`Index (${type}) added successfully.`);
+
+                // CRITICAL: Double refresh
+                await this.loadTableDataFromServer(this.S.db, this.S.table);
                 await this.loadIndexes();
 
             } catch (err) {
-                this.showAlertDialog("Database Error", err.message, "error");
+                this.showMsg(err.message, "error");
             }
         }
     );
+}
+
+export function toggleSidebar() {
+    this.S.sidebarOpen = !this.S.sidebarOpen;
+    this.saveLocalState(); // Save preference
+
+    // Target the sidebar element directly to hide/show it without redrawing the whole app
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.style.display = this.S.sidebarOpen ? 'flex' : 'none';
+    }
+}
+
+export function toggleTheme() {
+    this.S.theme = this.S.theme === 'dark' ? 'light' : 'dark';
+    this.saveLocalState();
+
+    // Swap the CSS class
+    if (this.S.theme === 'light') document.body.classList.add('light-theme');
+    else document.body.classList.remove('light-theme');
+
+    // Swap the button icon dynamically (Sun vs Moon)
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.innerHTML = this.S.theme === 'dark'
+            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+    }
+}
+
+export function toggleTerminal() {
+    this.S.terminalOpen = !this.S.terminalOpen;
+    this.saveLocalState(); // Save preference
+
+    // Target the UI elements directly for a smooth transition
+    const wrapper = document.getElementById('terminal-wrapper');
+    const body = document.getElementById('term-body');
+    const btn = document.getElementById('term-toggle-btn');
+
+    if (wrapper && body && btn) {
+        if (this.S.terminalOpen) {
+            wrapper.style.height = '180px';
+            body.style.display = 'block';
+            btn.innerHTML = '▼';
+        } else {
+            wrapper.style.height = '32px'; // Height of the header bar only
+            body.style.display = 'none';
+            btn.innerHTML = '▲';
+        }
+    }
+}
+
+export function saveLocalState() {
+    localStorage.setItem('dbm_state', JSON.stringify({
+        db: this.S.db,
+        table: this.S.table,
+        tab: this.S.tab,
+        sidebarOpen: this.S.sidebarOpen,
+        terminalOpen: this.S.terminalOpen,
+        theme: this.S.theme
+    }));
+    // Sets must be converted to arrays to save in JSON
+    localStorage.setItem('dbm_expanded', JSON.stringify([...this.S.expandedDbs]));
 }

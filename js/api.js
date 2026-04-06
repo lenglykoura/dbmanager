@@ -226,7 +226,14 @@ export async function saveCell(rowIndex, colIndex, el) {
     }
 
     const oldValue = this.APP.tableData[table][rowIndex][colIndex];
-    if (String(newValue) === String(oldValue) || (newValue === null && oldValue === null)) return;
+
+    // --- FIX: Close the input even if the value didn't change ---
+    if (String(newValue) === String(oldValue) || (newValue === null && oldValue === null)) {
+        if (el.tagName === 'INPUT') {
+            this.renderPanel(); // Redraw to switch input back to text
+        }
+        return;
+    }
 
     const pkColIndex = schema.findIndex(c => c.x === 'PK');
     if (pkColIndex === -1) {
@@ -266,7 +273,8 @@ export async function saveCell(rowIndex, colIndex, el) {
             el.value = oldValue !== null ? oldValue : '';
             if (el.tagName === 'INPUT') {
                 el.style.backgroundColor = 'rgba(240, 82, 82, 0.2)';
-                setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+                // Wait 1 second to show the red error, then close the input
+                setTimeout(() => this.renderPanel(), 1000);
             }
         } else {
             el.innerText = oldValue !== null ? oldValue : '';

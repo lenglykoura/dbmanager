@@ -16,7 +16,7 @@ class DBManager {
       tab: savedState.tab || 'browse',
       sidebarOpen: savedState.sidebarOpen !== false,
       theme: savedState.theme || 'dark',
-      logs: [],
+      logs: savedState.logs || [],
       terminalOpen: savedState.terminalOpen !== false,
       page: 1, perPage: 15,
       queryResult: null, queryHeaders: [], msg: null, msgType: 'success',

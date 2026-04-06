@@ -573,7 +573,48 @@ export function toggleTerminal() {
         }
     }
 }
+// --- NEW: Column Resize Logic ---
+export function initResize(e, resizer) {
+    e.stopPropagation();
+    e.preventDefault();
 
+    const th = resizer.parentElement;
+    const startX = e.pageX;
+    const startWidth = th.offsetWidth;
+    const table = th.closest('table');
+
+    // Lock the table layout so our custom pixel widths are strictly respected
+    if (table.style.tableLayout !== 'fixed') {
+        const allHeaders = table.querySelectorAll('th');
+        // Give every column an explicit starting width so they don't collapse
+        allHeaders.forEach(h => h.style.width = h.offsetWidth + 'px');
+        table.style.tableLayout = 'fixed';
+        table.style.width = 'max-content'; // Allows the table to scroll horizontally if expanded
+    }
+
+    resizer.classList.add('resizing');
+
+    // Run when mouse moves
+    const onMouseMove = (moveEvent) => {
+        requestAnimationFrame(() => {
+            const newWidth = Math.max(30, startWidth + (moveEvent.pageX - startX));
+            th.style.width = newWidth + 'px';
+            th.style.minWidth = newWidth + 'px';
+            th.style.maxWidth = newWidth + 'px';
+        });
+    };
+
+    // Run when mouse is released
+    const onMouseUp = () => {
+        resizer.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    // Attach global listeners so it keeps tracking even if mouse leaves the header
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+}
 export function saveLocalState() {
     localStorage.setItem('dbm_state', JSON.stringify({
         db: this.S.db,
@@ -581,7 +622,8 @@ export function saveLocalState() {
         tab: this.S.tab,
         sidebarOpen: this.S.sidebarOpen,
         terminalOpen: this.S.terminalOpen,
-        theme: this.S.theme
+        theme: this.S.theme,
+        logs: this.S.logs
     }));
     // Sets must be converted to arrays to save in JSON
     localStorage.setItem('dbm_expanded', JSON.stringify([...this.S.expandedDbs]));

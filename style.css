@@ -1009,3 +1009,23 @@ textarea.sql-editor {
   outline: none !important;
   background: var(--bg2) !important;
 }
+.data-tbl th {
+  position: relative; /* Allows absolute positioning inside the header */
+}
+
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 10;
+  transition: background 0.2s;
+}
+
+.col-resizer:hover, .col-resizer.resizing {
+  background: var(--accent);
+  opacity: 0.8;
+}

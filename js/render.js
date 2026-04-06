@@ -61,9 +61,11 @@ export function showMsg(m, t = 'success') {
   const time = new Date().toLocaleTimeString('en-US', { hour12: false });
   this.S.logs.push({ time, msg: m, type: t });
 
-  // --- NEW: Auto-expand the terminal if it is currently hidden ---
+  // Memory protection: Keep only the latest 100 logs
+  if (this.S.logs.length > 100) this.S.logs = this.S.logs.slice(-100);
+
+  // Auto-expand the terminal if it is currently hidden
   if (!this.S.terminalOpen) {
-    // Calling your toggle function will flip the state to true and trigger the CSS animation
     if (typeof this.toggleTerminal === 'function') {
       this.toggleTerminal();
     } else {
@@ -71,8 +73,20 @@ export function showMsg(m, t = 'success') {
     }
   }
 
+  // NEW: Save the updated logs to localStorage
+  if (typeof this.saveLocalState === 'function') this.saveLocalState();
+
   this.renderTerminal();
 }
+
+// export function clearTerminal() {
+//   this.S.logs = [];
+
+//   // NEW: Save the empty state to localStorage
+//   if (typeof this.saveLocalState === 'function') this.saveLocalState();
+
+//   this.renderTerminal();
+// }
 
 export function renderTerminal() {
   const body = document.getElementById('term-body');
@@ -292,7 +306,6 @@ export function renderPanel() {
             <td style="width:34px;text-align:center;">
               <input type="checkbox" onchange="window._dbm.toggleRow(${actualRowIndex})" ${isSelected ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);" />
             </td>
-            <td style="color:var(--text3); font-size:10px;">${start + localIdx + 1}</td>
             ${r.map((c, cIdx) => {
         const isPk = cIdx === pkIndex;
         const colDef = schema[cIdx];
@@ -437,8 +450,8 @@ export function renderPanel() {
               <table class="data-tbl">
                   <thead><tr>
                     <th style="width:34px; text-align:center;"><input type="checkbox" onchange="window._dbm.toggleAll(this.checked, ${JSON.stringify(pageRowsIndices)})" ${allSelectedOnPage ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);" title="Select page" /></th>
-                    <th style="width:34px;">#</th>
-                    ${headers.map(h => `<th>${h}</th>`).join('')}
+               
+                    ${headers.map(h => `<th style="position:relative;">${h}<div class="col-resizer" onmousedown="window._dbm.initResize(event, this)"></div></th>`).join('')}
                   </tr></thead>
                   <tbody>${tbodyHtml || `<tr><td colspan="${headers.length + 2}" style="text-align:center;padding:32px;color:var(--text3)">No data found</td></tr>`}</tbody>
               </table>

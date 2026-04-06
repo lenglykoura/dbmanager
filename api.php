@@ -227,6 +227,45 @@ try {
                 echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             }
             break;
+        case 'edit_index':
+            $pdo = getDB();
+            $db = $input['db'] ?? '';
+            $table = $input['table'] ?? '';
+            $oldKey = $input['old_key_name'] ?? '';
+            $newKey = $input['new_key_name'] ?? '';
+            $col = $input['col_name'] ?? '';
+            $type = $input['index_type'] ?? '';
+
+            if (!$db || !$table || !$oldKey || !$col) {
+                throw new Exception("Missing required edit index parameters.");
+            }
+
+            $pdo->exec("USE `$db`");
+
+            // 1. Build the DROP command
+            $dropSql = ($oldKey === 'PRIMARY') ? "DROP PRIMARY KEY" : "DROP INDEX `$oldKey`";
+
+            // 2. Build the ADD command
+            if ($type === 'PRIMARY') {
+                $addSql = "ADD PRIMARY KEY (`$col`)";
+            } elseif ($type === 'UNIQUE') {
+                $idxName = $newKey ? $newKey : $col . "_idx_" . time();
+                $addSql = "ADD UNIQUE `$idxName` (`$col`)";
+            } else {
+                $idxName = $newKey ? $newKey : $col . "_idx_" . time();
+                $addSql = "ADD INDEX `$idxName` (`$col`)";
+            }
+
+            try {
+                // Execute both simultaneously so the table is never left without an index
+                $sql = "ALTER TABLE `$table` $dropSql, $addSql";
+                $pdo->exec($sql);
+                echo json_encode(['success' => true]);
+            } catch (PDOException $e) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
         case 'get_indexes':
             $pdo = getDB();
             $db = $_GET['db'];

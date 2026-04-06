@@ -520,7 +520,7 @@ export function renderPanel() {
     const indexRows = this.S.currentIndexes.map(idx => `
             <tr>
                 <td>
-                    <button class="btn" style="padding:2px 6px; font-size:10px; background:transparent;">✎ Edit</button>
+                    <button class="btn" style="padding:2px 6px; font-size:10px; background:transparent;" onclick="window._dbm.openEditIndexModal('${idx.Key_name}')">✎ Edit</button>
                     <button class="btn danger" style="padding:2px 6px; font-size:10px; margin-left:4px;" onclick="window._dbm.dropIndex('${idx.Key_name}')">✕ Drop</button>
                 </td>
                 <td class="fw-bold">${idx.Key_name}</td>
@@ -532,7 +532,6 @@ export function renderPanel() {
                 <td>${idx.Null || 'No'}</td>
             </tr>
         `).join('');
-
     p.innerHTML = `
           ${msgHtml}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">

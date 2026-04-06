@@ -615,6 +615,92 @@ export function initResize(e, resizer) {
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
 }
+
+export function openEditIndexModal(keyName) {
+    const idx = this.S.currentIndexes.find(i => i.Key_name === keyName);
+    if (!idx) return;
+
+    const headers = this.APP.colHeaders[this.S.table] || [];
+
+    // Determine the current index type
+    let currentType = 'INDEX';
+    if (idx.Key_name === 'PRIMARY') currentType = 'PRIMARY';
+    else if (idx.Non_unique === '0') currentType = 'UNIQUE';
+
+    const modalHtml = `
+        <div id="index-modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter:blur(3px);">
+            <div style="background:var(--bg1); border:1px solid var(--line2); border-radius:var(--radius-lg); padding:24px; width:400px; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+                <div style="font-family:var(--font-display); font-size:16px; font-weight:700; margin-bottom:20px; color:var(--text0);">✎ Edit Index: <span style="color:var(--accent)">${keyName}</span></div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div>
+                        <label style="font-size:10px; color:var(--text2);">Index Name (Optional)</label>
+                        <input id="edit-idx-name" class="search-input" style="width:100%" value="${idx.Key_name === 'PRIMARY' ? '' : idx.Key_name}" ${idx.Key_name === 'PRIMARY' ? 'disabled title="Cannot rename PRIMARY"' : ''} placeholder="e.g. idx_user_email" />
+                    </div>
+                    <div>
+                        <label style="font-size:10px; color:var(--text2);">Column</label>
+                        <select id="edit-idx-col" class="search-input" style="width:100%">
+                            ${headers.map(h => `<option value="${h}" ${h === idx.Column_name ? 'selected' : ''}>${h}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:10px; color:var(--text2);">Index Type</label>
+                        <select id="edit-idx-type" class="search-input" style="width:100%" ${idx.Key_name === 'PRIMARY' ? 'disabled' : ''}>
+                            <option value="INDEX" ${currentType === 'INDEX' ? 'selected' : ''}>INDEX (Standard)</option>
+                            <option value="UNIQUE" ${currentType === 'UNIQUE' ? 'selected' : ''}>UNIQUE</option>
+                            <option value="PRIMARY" ${currentType === 'PRIMARY' ? 'selected' : ''}>PRIMARY KEY</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
+                    <button class="btn" onclick="document.getElementById('index-modal-overlay').remove()">Cancel</button>
+                    <button class="btn primary" onclick="window._dbm.submitEditIndex('${keyName}')">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+export async function submitEditIndex(oldKeyName) {
+    const nameEl = document.getElementById('edit-idx-name');
+    const newName = nameEl ? nameEl.value.trim() : '';
+    const col = document.getElementById('edit-idx-col').value;
+
+    // PRIMARY keys are locked, so fallback securely
+    const typeSelect = document.getElementById('edit-idx-type');
+    const type = (oldKeyName === 'PRIMARY' || !typeSelect) ? 'PRIMARY' : typeSelect.value;
+
+    try {
+        const res = await fetch(`${this.apiUrl}?action=edit_index`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                db: this.S.db,
+                table: this.S.table,
+                old_key_name: oldKeyName,
+                new_key_name: newName,
+                col_name: col,
+                index_type: type
+            })
+        });
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to edit index');
+
+        const modal = document.getElementById('index-modal-overlay');
+        if (modal) modal.remove();
+
+        this.showMsg(`Index updated successfully.`);
+
+        // Double refresh to update UI securely
+        await this.loadTableDataFromServer(this.S.db, this.S.table);
+        await this.loadIndexes();
+
+    } catch (err) {
+        this.showMsg(err.message, "error");
+    }
+}
+
 export function saveLocalState() {
     localStorage.setItem('dbm_state', JSON.stringify({
         db: this.S.db,

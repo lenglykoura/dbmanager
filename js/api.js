@@ -216,7 +216,7 @@ export async function saveCell(rowIndex, colIndex, el) {
 
     // Determine how to get the value based on the HTML element type
     let newValue;
-    if (el.tagName === 'SELECT') {
+    if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
         newValue = el.value;
         if (newValue === '') newValue = null;
     } else {
@@ -260,8 +260,12 @@ export async function saveCell(rowIndex, colIndex, el) {
         this.showMsg(`Updated ${colName} successfully`);
     } catch (err) {
         // Revert the value if it fails
-        if (el.tagName === 'SELECT') {
+        if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
             el.value = oldValue !== null ? oldValue : '';
+            if (el.tagName === 'INPUT') {
+                el.style.backgroundColor = 'rgba(240, 82, 82, 0.2)';
+                setTimeout(() => el.style.backgroundColor = 'transparent', 1000);
+            }
         } else {
             el.innerText = oldValue !== null ? oldValue : '';
             el.style.backgroundColor = 'rgba(240, 82, 82, 0.2)';

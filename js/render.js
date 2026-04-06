@@ -317,6 +317,18 @@ export function renderPanel() {
     const schema = this.APP.schemas[this.S.table] || [];
     const pkIndex = schema.findIndex(c => c.x === 'PK');
 
+    let dataListsHtml = '';
+    if (this.APP.fkOptions && this.APP.fkOptions[this.S.table]) {
+      Object.entries(this.APP.fkOptions[this.S.table]).forEach(([colName, opts]) => {
+        dataListsHtml += `<datalist id="fk-list-${colName}">`;
+        opts.forEach(opt => {
+          const display = opt.val == opt.label ? opt.val : `${opt.label} (ID: ${opt.val})`;
+          dataListsHtml += `<option value="${opt.val}">${display}</option>`;
+        });
+        dataListsHtml += `</datalist>`;
+      });
+    }
+
     const tbodyHtml = pageRowsWithIndex.map((item, localIdx) => {
       const r = item.row;
       const actualRowIndex = item.originalIndex;
@@ -336,17 +348,11 @@ export function renderPanel() {
         const fkOpts = (window._dbm.APP.fkOptions && window._dbm.APP.fkOptions[window._dbm.S.table]) ? window._dbm.APP.fkOptions[window._dbm.S.table][colDef.n] : null;
 
         if (fkOpts) {
-          const optionsHtml = fkOpts.map(opt => {
-            // Show "1 - Admin" if there's a label, otherwise just show "1"
-            const display = opt.val === opt.label ? opt.val : `${opt.val} - ${opt.label}`;
-            return `<option value="${opt.val}" ${String(c) === String(opt.val) ? 'selected' : ''}>${display}</option>`;
-          }).join('');
-
           return `<td style="padding:0; min-width:140px;">
-                      <select onchange="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit; cursor:pointer; -webkit-appearance:none;">
-                          ${colDef.null ? `<option value="" ${c === null ? 'selected' : ''}>[NULL]</option>` : ''}
-                          ${optionsHtml}
-                      </select>
+                      <input type="text" list="fk-list-${colDef.n}" value="${c !== null ? c : ''}" placeholder="${colDef.null ? 'NULL' : ''}"
+                          onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)"
+                          onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
+                          style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit;">
                   </td>`;
         }
 
@@ -480,7 +486,8 @@ export function renderPanel() {
                   </tr></thead>
                   <tbody>${tbodyHtml || `<tr><td colspan="${headers.length + 2}" style="text-align:center;padding:32px;color:var(--text3)">No data found</td></tr>`}</tbody>
               </table>
-          </div>`;
+          </div>
+          ${dataListsHtml}`;
   }
   else if (this.S.tab === 'structure') {
     const cols = this.APP.schemas[this.S.table] || [];

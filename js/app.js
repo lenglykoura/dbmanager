@@ -15,7 +15,7 @@ class DBManager {
       table: savedState.table || '',
       tab: savedState.tab || 'browse',
       sidebarOpen: savedState.sidebarOpen !== false,
-      theme: savedState.theme || 'dark',
+      theme: savedState.theme || 'light',
       logs: savedState.logs || [],
       terminalOpen: savedState.terminalOpen !== false,
       page: 1, perPage: 15,

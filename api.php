@@ -177,7 +177,7 @@ try {
                         break;
                     }
                 }
-                $optsStmt = $pdo->query("SELECT `$refCol` as val, `$displayCol` as label FROM `$refTable` LIMIT 1000");
+                $optsStmt = $pdo->query("SELECT `$refCol` as val, `$displayCol` as label FROM `$refTable` LIMIT 25");
                 $fkOptions[$colName] = $optsStmt->fetchAll(PDO::FETCH_ASSOC);
             }
 

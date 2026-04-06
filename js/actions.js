@@ -250,26 +250,6 @@ export async function submitAddColumn() {
     }
 }
 
-// export async function dropColumn(colName) {
-//     if (!confirm(`Are you sure you want to DROP the column '${colName}'? All data in this column will be lost forever.`)) return;
-
-//     try {
-//         const res = await fetch(`${this.apiUrl}?action=drop_column`, {
-//             method: 'POST',
-//             headers: { 'Content-Type': 'application/json' },
-//             body: JSON.stringify({ db: this.S.db, table: this.S.table, col_name: colName })
-//         });
-
-//         const data = await res.json();
-//         if (!res.ok) throw new Error(data.error);
-
-//         this.showMsg(`Column '${colName}' dropped successfully.`);
-//         await this.loadTableDataFromServer(this.S.db, this.S.table);
-//     } catch (err) {
-//         this.showMsg(err.message, "error");
-//     }
-// }
-
 // ─── ADVANCED STRUCTURE CONTROL LOGIC ───────────────────────────────
 
 export function openColumnEditor(colName = null) {
@@ -446,15 +426,38 @@ export async function submitColumnEditor(isEdit, oldName) {
 }
 
 export async function dropColumn(colName) {
-    if (!confirm(`DROP column '${colName}' ? All data will be lost!`)) return;
-    try {
-        await fetch(`${this.apiUrl}?action = drop_column`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ db: this.S.db, table: this.S.table, col_name: colName })
-        });
-        this.showMsg(`Column dropped.`);
-        await this.loadTableDataFromServer(this.S.db, this.S.table);
-    } catch (err) { this.showMsg(err.message, "error"); }
+    // 1. Use the custom confirmation dialog to ask before acting
+    this.showConfirmDialog(
+        "Drop Column",
+        `Are you sure you want to DROP the column "${colName}"? All data in this column will be lost forever.`,
+        async () => {
+            try {
+                const res = await fetch(`${this.apiUrl}?action=drop_column`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        db: this.S.db,
+                        table: this.S.table,
+                        col_name: colName
+                    })
+                });
+
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to drop column');
+
+                // 2. Show the custom success alert
+                this.showMsg(`Column "${colName}" was removed successfully.`);
+
+                // 3. CRITICAL: Refresh the data on the screen
+                // This re-fetches the updated schema and rows from api.php
+                await this.loadTableDataFromServer(this.S.db, this.S.table);
+
+            } catch (err) {
+                // Show the custom error alert if something goes wrong
+                this.showMsg("Database Error", err.message);
+            }
+        }
+    );
 }
 
 export async function addIndex(colName, type) {
@@ -528,33 +531,36 @@ export async function submitIndex() {
     const col = document.getElementById('idx-col').value;
     const type = document.getElementById('idx-type').value;
 
-    try {
-        // 1. Send the command to the API
-        const res = await fetch(`${this.apiUrl}?action=add_index`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                db: this.S.db,
-                table: this.S.table,
-                col_name: col,
-                index_type: type
-            })
-        });
+    // Use the custom confirmation instead of alert or immediate action
+    this.showConfirmDialog(
+        "Confirm Index",
+        `Are you sure you want to add a ${type} index to the column "${col}"?`,
+        async () => {
+            // This code runs ONLY if the user clicks "Yes"
+            try {
+                const res = await fetch(`${this.apiUrl}?action=add_index`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        db: this.S.db,
+                        table: this.S.table,
+                        col_name: col,
+                        index_type: type
+                    })
+                });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to add index');
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Failed to add index');
 
-        // 2. Remove the modal
-        const modal = document.getElementById('index-modal-overlay');
-        if (modal) modal.remove();
+                const modal = document.getElementById('index-modal-overlay');
+                if (modal) modal.remove();
 
-        // 3. Show success message
-        this.showMsg(`Index (${type}) added to ${col} successfully.`);
+                this.showAlertDialog("Success", `Index (${type}) added successfully.`, "success");
+                await this.loadIndexes();
 
-        // 4. CRITICAL: Re-fetch the indexes from the database to show the new row
-        await this.loadIndexes();
-
-    } catch (err) {
-        this.showMsg(err.message, "error");
-    }
+            } catch (err) {
+                this.showAlertDialog("Database Error", err.message, "error");
+            }
+        }
+    );
 }

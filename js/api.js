@@ -20,7 +20,7 @@ export async function doLogin() {
         this.renderShell();
         await this.loadDatabasesFromServer();
     } catch (error) {
-        alert("Login failed: " + error.message);
+        this.showAlertDialog("Connection Failed", error.message, "error");
     }
 }
 

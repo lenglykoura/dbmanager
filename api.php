@@ -153,18 +153,28 @@ try {
 
             echo json_encode(['success' => true]);
             break;
+        // api.php snippet
         case 'drop_column':
             $pdo = getDB();
-            $pdo->exec("USE `{$input['db']}`");
-            $pdo->exec("ALTER TABLE `{$input['table']}` DROP COLUMN `{$input['col_name']}`");
+            $db = $input['db']; // Ensure this matches the JSON sent from actions.js
+            $table = $input['table'];
+            $col = $input['col_name'];
+
+            $pdo->exec("USE `$db`");
+            $pdo->exec("ALTER TABLE `$table` DROP COLUMN `$col`");
             echo json_encode(['success' => true]);
             break;
         case 'add_index':
             $pdo = getDB();
-            $db = $input['db'];
-            $table = $input['table'];
-            $col = $input['col_name'];
-            $type = $input['index_type']; // PRIMARY, UNIQUE, INDEX
+            // Pull data from the JSON input body
+            $db = $input['db'] ?? '';
+            $table = $input['table'] ?? '';
+            $col = $input['col_name'] ?? '';
+            $type = $input['index_type'] ?? '';
+
+            if (!$db || !$table || !$col) {
+                throw new Exception("Missing required index parameters.");
+            }
 
             $pdo->exec("USE `$db`");
 
@@ -174,11 +184,18 @@ try {
             } elseif ($type === 'UNIQUE') {
                 $sql = "ALTER TABLE `$table` ADD UNIQUE (`$col`)";
             } else {
-                $sql = "ALTER TABLE `$table` ADD INDEX (`$col`)";
+                // For standard indexes, we provide a generated name
+                $idxName = $col . "_idx_" . time();
+                $sql = "ALTER TABLE `$table` ADD INDEX `$idxName` (`$col`)";
             }
 
-            $pdo->exec($sql);
-            echo json_encode(['success' => true]);
+            try {
+                $pdo->exec($sql);
+                echo json_encode(['success' => true]);
+            } catch (PDOException $e) {
+                http_response_code(400); // Send an error code
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
             break;
         case 'get_indexes':
             $pdo = getDB();

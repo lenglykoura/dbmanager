@@ -1,19 +1,75 @@
+/**
+ * Displays a custom styled alert dialog
+ * @param {string} title - The header text
+ * @param {string} msg - The body message
+ * @param {string} type - 'error' or 'success'
+ */
+
+export function showAlertDialog(title, msg, type = 'success') {
+  const color = type === 'error' ? 'var(--red)' : 'var(--green)';
+  const icon = type === 'error' ? '✕' : '✓';
+
+  const modalHtml = `
+        <div id="custom-alert-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(4px); animation: fadeIn 0.2s ease;">
+            <div style="background:var(--bg1); border:1px solid var(--line2); border-radius:var(--radius-lg); padding:28px; width:400px; box-shadow:0 32px 64px rgba(0,0,0,0.5); text-align:center;">
+                <div style="width:50px; height:50px; border-radius:50%; background:${color}20; color:${color}; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; font-weight:bold; border:2px solid ${color}40;">
+                    ${icon}
+                </div>
+                <div style="font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--text0); margin-bottom:8px;">${title}</div>
+                <div style="font-size:13px; color:var(--text1); margin-bottom:24px; line-height:1.6;">${msg}</div>
+                <button class="login-btn" style="width:120px; background:${color};" onclick="window._dbm.closeAlertDialog()">Dismiss</button>
+            </div>
+        </div>
+    `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+export function showConfirmDialog(title, msg, onConfirm) {
+  const modalHtml = `
+        <div id="custom-confirm-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(4px); animation: fadeIn 0.2s ease;">
+            <div style="background:var(--bg1); border:1px solid var(--line2); border-radius:var(--radius-lg); padding:28px; width:400px; box-shadow:0 32px 64px rgba(0,0,0,0.5); text-align:center;">
+                <div style="width:50px; height:50px; border-radius:50%; background:var(--accent-dim); color:var(--accent); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; border:2px solid var(--accent-dim);">
+                    ❓
+                </div>
+                <div style="font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--text0); margin-bottom:8px;">${title}</div>
+                <div style="font-size:13px; color:var(--text1); margin-bottom:24px; line-height:1.6;">${msg}</div>
+                <div style="display:flex; gap:12px; justify-content:center;">
+                    <button class="btn" style="width:100px;" onclick="document.getElementById('custom-confirm-overlay').remove()">Cancel</button>
+                    <button id="confirm-yes-btn" class="login-btn" style="width:100px; margin-top:0;">Confirm</button>
+                </div>
+            </div>
+        </div>
+    `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  // Attach the actual action to the "Yes" button
+  document.getElementById('confirm-yes-btn').onclick = () => {
+    document.getElementById('custom-confirm-overlay').remove();
+    onConfirm();
+  };
+}
+
+export function closeAlertDialog() {
+  const el = document.getElementById('custom-alert-overlay');
+  if (el) el.remove();
+}
+
 export function showMsg(m, t = 'success') {
-    this.S.msg = m; this.S.msgType = t;
-    this.renderPanel();
-    setTimeout(() => { this.S.msg = null; this.renderPanel(); }, 4000);
+  this.S.msg = m; this.S.msgType = t;
+  this.renderPanel();
+  setTimeout(() => { this.S.msg = null; this.renderPanel(); }, 4000);
 }
 
 export function updateStatus() {
-    const d = document.getElementById('status-db');
-    const t = document.getElementById('status-tbl');
-    if (d) d.textContent = `DB: ${this.S.db}`;
-    if (t) t.textContent = `Table: ${this.S.table}`;
+  const d = document.getElementById('status-db');
+  const t = document.getElementById('status-tbl');
+  if (d) d.textContent = `DB: ${this.S.db}`;
+  if (t) t.textContent = `Table: ${this.S.table}`;
 }
 
 export function renderShell() {
-    if (!this.S.isLoggedIn) {
-        this.container.innerHTML = `
+  if (!this.S.isLoggedIn) {
+    this.container.innerHTML = `
           <div id="login-screen">
             <div class="login-box">
               <div class="login-logo">DB<em style="color:var(--accent)">Manager</em></div>
@@ -26,12 +82,12 @@ export function renderShell() {
             </div>
           </div>`;
 
-        const loginInputs = this.container.querySelectorAll('#login-screen input');
-        loginInputs.forEach(input => {
-            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.doLogin(); });
-        });
-    } else {
-        this.container.innerHTML = `
+    const loginInputs = this.container.querySelectorAll('#login-screen input');
+    loginInputs.forEach(input => {
+      input.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.doLogin(); });
+    });
+  } else {
+    this.container.innerHTML = `
           <div id="shell">
             <div id="topbar">
               <div class="brand">DB<em>Manager</em></div>
@@ -60,130 +116,130 @@ export function renderShell() {
               <div class="status-item" id="status-tbl">Table: —</div>
             </div>
           </div>`;
-        this.renderSidebar();
-    }
+    this.renderSidebar();
+  }
 }
 
 export function renderSidebar(filter = '') {
-    const el = document.getElementById('sidebar-content');
-    if (!el) return;
-    let html = '';
+  const el = document.getElementById('sidebar-content');
+  if (!el) return;
+  let html = '';
 
-    Object.entries(this.APP.databases).forEach(([db, info]) => {
-        const isActiveDb = this.S.db === db;
-        const isOpen = this.S.expandedDbs.has(db);
-        if (!(!filter || db.includes(filter)) && !info.tables.some(t => t.includes(filter))) return;
+  Object.entries(this.APP.databases).forEach(([db, info]) => {
+    const isActiveDb = this.S.db === db;
+    const isOpen = this.S.expandedDbs.has(db);
+    if (!(!filter || db.includes(filter)) && !info.tables.some(t => t.includes(filter))) return;
 
-        html += `
+    html += `
           <div class="db-row ${isActiveDb ? 'active' : ''} ${isOpen ? 'open' : ''}" onclick="window._dbm.toggleDb('${db}')">
             <svg class="db-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><ellipse cx="8" cy="4" rx="6" ry="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M2 4v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V4" stroke="currentColor" stroke-width="1.1"/><path d="M2 8v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V8" stroke="currentColor" stroke-width="1.1"/></svg>
             ${db}
             <span class="db-arrow">▶</span>
           </div>`;
 
-        if (isOpen) {
-            info.tables.filter(t => !filter || t.includes(filter)).forEach(t => {
-                const isActiveTable = (this.S.db === db && this.S.table === t);
-                html += `
+    if (isOpen) {
+      info.tables.filter(t => !filter || t.includes(filter)).forEach(t => {
+        const isActiveTable = (this.S.db === db && this.S.table === t);
+        html += `
               <div class="tbl-row ${isActiveTable ? 'active' : ''}" onclick="window._dbm.selectTable('${db}', '${t}')">
                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="0.9"/><line x1="1" y1="4.2" x2="11" y2="4.2" stroke="currentColor" stroke-width="0.7"/><line x1="1" y1="7.5" x2="11" y2="7.5" stroke="currentColor" stroke-width="0.7"/><line x1="4.5" y1="4.2" x2="4.5" y2="11" stroke="currentColor" stroke-width="0.7"/></svg>
                 ${t}
               </div>`;
-            });
-        }
-    });
+      });
+    }
+  });
 
-    el.innerHTML = html || '<div style="padding:16px;color:var(--text3);font-size:11px">No matches</div>';
+  el.innerHTML = html || '<div style="padding:16px;color:var(--text3);font-size:11px">No matches</div>';
 }
 
 export function renderPanel() {
-    const p = document.getElementById('panel');
-    if (!p) return;
-    if (!this.S.table && this.S.tab !== 'sql') { p.innerHTML = '<div style="color:var(--text3)">Select a table to begin.</div>'; return; }
+  const p = document.getElementById('panel');
+  if (!p) return;
+  if (!this.S.table && this.S.tab !== 'sql') { p.innerHTML = '<div style="color:var(--text3)">Select a table to begin.</div>'; return; }
 
-    const msgHtml = this.S.msg ? `<div class="result-msg ${this.S.msgType}">${this.S.msgType === 'success' ? '✓' : '✕'} ${this.S.msg}</div>` : '';
+  const msgHtml = this.S.msg ? `<div class="result-msg ${this.S.msgType}">${this.S.msgType === 'success' ? '✓' : '✕'} ${this.S.msg}</div>` : '';
 
-    if (this.S.tab === 'browse') {
-        const headers = this.APP.colHeaders[this.S.table] || [];
-        let rowsWithIndex = (this.APP.tableData[this.S.table] || []).map((row, originalIndex) => ({ row, originalIndex }));
+  if (this.S.tab === 'browse') {
+    const headers = this.APP.colHeaders[this.S.table] || [];
+    let rowsWithIndex = (this.APP.tableData[this.S.table] || []).map((row, originalIndex) => ({ row, originalIndex }));
 
-        if (this.S.appliedFilters.length > 0) {
-            rowsWithIndex = rowsWithIndex.filter(({ row }) => {
-                return this.S.appliedFilters.every(f => {
-                    if (!f.active || !f.col || !f.op) return true;
-                    const colIdx = headers.indexOf(f.col);
-                    if (colIdx === -1) return true;
+    if (this.S.appliedFilters.length > 0) {
+      rowsWithIndex = rowsWithIndex.filter(({ row }) => {
+        return this.S.appliedFilters.every(f => {
+          if (!f.active || !f.col || !f.op) return true;
+          const colIdx = headers.indexOf(f.col);
+          if (colIdx === -1) return true;
 
-                    const cellVal = row[colIdx];
-                    const filterVal = f.val.toLowerCase();
-                    const cellStr = String(cellVal ?? '').toLowerCase();
+          const cellVal = row[colIdx];
+          const filterVal = f.val.toLowerCase();
+          const cellStr = String(cellVal ?? '').toLowerCase();
 
-                    switch (f.op) {
-                        case '=': return cellStr === filterVal;
-                        case '!=': return cellStr !== filterVal;
-                        case 'contains': return cellStr.includes(filterVal);
-                        case 'starts with': return cellStr.startsWith(filterVal);
-                        case 'ends with': return cellStr.endsWith(filterVal);
-                        case '>': return Number(cellVal) > Number(f.val);
-                        case '<': return Number(cellVal) < Number(f.val);
-                        case '>=': return Number(cellVal) >= Number(f.val);
-                        case '<=': return Number(cellVal) <= Number(f.val);
-                        case 'is null': return cellVal === null;
-                        case 'is not null': return cellVal !== null;
-                        default: return true;
-                    }
-                });
-            });
+          switch (f.op) {
+            case '=': return cellStr === filterVal;
+            case '!=': return cellStr !== filterVal;
+            case 'contains': return cellStr.includes(filterVal);
+            case 'starts with': return cellStr.startsWith(filterVal);
+            case 'ends with': return cellStr.endsWith(filterVal);
+            case '>': return Number(cellVal) > Number(f.val);
+            case '<': return Number(cellVal) < Number(f.val);
+            case '>=': return Number(cellVal) >= Number(f.val);
+            case '<=': return Number(cellVal) <= Number(f.val);
+            case 'is null': return cellVal === null;
+            case 'is not null': return cellVal !== null;
+            default: return true;
+          }
+        });
+      });
+    }
+
+    if (this.S.appliedSorts.length > 0) {
+      rowsWithIndex.sort((a, b) => {
+        for (const s of this.S.appliedSorts) {
+          if (!s.col) continue;
+          const colIdx = headers.indexOf(s.col);
+          const valA = a.row[colIdx];
+          const valB = b.row[colIdx];
+          if (valA === valB) continue;
+          const cmp = valA == null ? -1 : valB == null ? 1 : valA > valB ? 1 : -1;
+          return s.dir === 'asc' ? cmp : -cmp;
         }
+        return 0;
+      });
+    }
 
-        if (this.S.appliedSorts.length > 0) {
-            rowsWithIndex.sort((a, b) => {
-                for (const s of this.S.appliedSorts) {
-                    if (!s.col) continue;
-                    const colIdx = headers.indexOf(s.col);
-                    const valA = a.row[colIdx];
-                    const valB = b.row[colIdx];
-                    if (valA === valB) continue;
-                    const cmp = valA == null ? -1 : valB == null ? 1 : valA > valB ? 1 : -1;
-                    return s.dir === 'asc' ? cmp : -cmp;
-                }
-                return 0;
-            });
-        }
+    const total = rowsWithIndex.length;
+    const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
+    if (this.S.page > totalPages) this.S.page = totalPages;
 
-        const total = rowsWithIndex.length;
-        const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
-        if (this.S.page > totalPages) this.S.page = totalPages;
+    const start = (this.S.page - 1) * this.S.perPage;
+    const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
 
-        const start = (this.S.page - 1) * this.S.perPage;
-        const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
+    const pageRowsIndices = pageRowsWithIndex.map(item => item.originalIndex);
+    const allSelectedOnPage = pageRowsIndices.length > 0 && pageRowsIndices.every(idx => this.S.selected.has(idx));
 
-        const pageRowsIndices = pageRowsWithIndex.map(item => item.originalIndex);
-        const allSelectedOnPage = pageRowsIndices.length > 0 && pageRowsIndices.every(idx => this.S.selected.has(idx));
+    const schema = this.APP.schemas[this.S.table] || [];
+    const pkIndex = schema.findIndex(c => c.x === 'PK');
 
-        const schema = this.APP.schemas[this.S.table] || [];
-        const pkIndex = schema.findIndex(c => c.x === 'PK');
-
-        const tbodyHtml = pageRowsWithIndex.map((item, localIdx) => {
-            const r = item.row;
-            const actualRowIndex = item.originalIndex;
-            const isSelected = this.S.selected.has(actualRowIndex);
-            return `<tr style="${isSelected ? 'background: var(--accent-dim2);' : ''}">
+    const tbodyHtml = pageRowsWithIndex.map((item, localIdx) => {
+      const r = item.row;
+      const actualRowIndex = item.originalIndex;
+      const isSelected = this.S.selected.has(actualRowIndex);
+      return `<tr style="${isSelected ? 'background: var(--accent-dim2);' : ''}">
             <td style="width:34px;text-align:center;">
               <input type="checkbox" onchange="window._dbm.toggleRow(${actualRowIndex})" ${isSelected ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);" />
             </td>
             <td style="color:var(--text3); font-size:10px;">${start + localIdx + 1}</td>
             ${r.map((c, cIdx) => {
-                const isPk = cIdx === pkIndex;
-                return `<td ${!isPk ? `contenteditable="true" spellcheck="false" style="outline:none; transition: background 0.3s;" onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" title="Click to edit"` : 'style="opacity:0.6; cursor:not-allowed;" title="Primary Key"'} >${c !== null ? c : ''}</td>`;
-            }).join('')}
+        const isPk = cIdx === pkIndex;
+        return `<td ${!isPk ? `contenteditable="true" spellcheck="false" style="outline:none; transition: background 0.3s;" onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" title="Click to edit"` : 'style="opacity:0.6; cursor:not-allowed;" title="Primary Key"'} >${c !== null ? c : ''}</td>`;
+      }).join('')}
           </tr>`;
-        }).join('');
+    }).join('');
 
-        const ops = ['=', '!=', 'contains', 'starts with', 'ends with', '>', '<', '>=', '<=', 'is null', 'is not null'];
-        let builderHtml = '';
-        if (this.S.showBuilder) {
-            builderHtml = `
+    const ops = ['=', '!=', 'contains', 'starts with', 'ends with', '>', '<', '>=', '<=', 'is null', 'is not null'];
+    let builderHtml = '';
+    if (this.S.showBuilder) {
+      builderHtml = `
             <div style="background:var(--bg1); border:1px solid var(--line); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
               <div style="font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
                 Filter <button class="btn" style="padding:2px 6px; font-size:10px;" onclick="window._dbm.addFilter()">+</button>
@@ -225,9 +281,9 @@ export function renderPanel() {
               </div>
             </div>
           `;
-        }
+    }
 
-        p.innerHTML = `${msgHtml}
+    p.innerHTML = `${msgHtml}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap: wrap; gap: 10px;">
               <div class="section-title" style="margin:0;">Data <span class="badge">${this.S.table}</span></div>
               <div class="page-info" style="display:flex; align-items:center;">
@@ -266,14 +322,14 @@ export function renderPanel() {
                   <tbody>${tbodyHtml || `<tr><td colspan="${headers.length + 2}" style="text-align:center;padding:32px;color:var(--text3)">No data found</td></tr>`}</tbody>
               </table>
           </div>`;
-    }
-    else if (this.S.tab === 'structure') {
-        const cols = this.APP.schemas[this.S.table] || [];
+  }
+  else if (this.S.tab === 'structure') {
+    const cols = this.APP.schemas[this.S.table] || [];
 
-        const colRows = cols.map(c => {
-            const isPk = c.x.includes('PK');
-            const hasIndex = c.x !== '';
-            return `<tr>
+    const colRows = cols.map(c => {
+      const isPk = c.x.includes('PK');
+      const hasIndex = c.x !== '';
+      return `<tr>
                 <td style="font-weight:600;color:var(--text0)">${c.n}</td>
                 <td><span class="pill varchar">${c.t}</span></td>
                 <td><span style="color:var(--text3); font-size:10px;">${c.collate || '—'}</span></td>
@@ -296,9 +352,9 @@ export function renderPanel() {
                     </button>
                 </td>
             </tr>`;
-        }).join('');
+    }).join('');
 
-        p.innerHTML = `${msgHtml}
+    p.innerHTML = `${msgHtml}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
               <div class="section-title" style="margin:0;">Structure <span class="badge">${this.S.table}</span></div>
               <button class="btn primary" onclick="window._dbm.openColumnEditor(null)">＋ Add Column</button>
@@ -319,12 +375,12 @@ export function renderPanel() {
               </table>
           </div>`;
 
-        if (!this.S.currentIndexes) {
-            this.loadIndexes(); // Initial fetch if not loaded
-            return p.innerHTML = '<div style="padding:20px; color:var(--text3);">Loading structure...</div>';
-        }
+    if (!this.S.currentIndexes) {
+      this.loadIndexes(); // Initial fetch if not loaded
+      return p.innerHTML = '<div style="padding:20px; color:var(--text3);">Loading structure...</div>';
+    }
 
-        const indexRows = this.S.currentIndexes.map(idx => `
+    const indexRows = this.S.currentIndexes.map(idx => `
             <tr>
                 <td>
                     <button class="btn" style="padding:2px 6px; font-size:10px; background:transparent;">✎ Edit</button>
@@ -340,7 +396,7 @@ export function renderPanel() {
             </tr>
         `).join('');
 
-        p.innerHTML = `
+    p.innerHTML = `
           ${msgHtml}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
               <div class="section-title" style="margin:0;">Structure <span class="badge">${this.S.table}</span></div>
@@ -366,20 +422,20 @@ export function renderPanel() {
               </table>
           </div>`;
 
-    }
-    else if (this.S.tab === 'sql') {
-        const defaultSQL = this.S.table ? `SELECT *\nFROM ${this.S.table}\nLIMIT 20;` : 'SHOW DATABASES;';
-        const displayHeaders = this.S.queryHeaders.length > 0 ? this.S.queryHeaders : (this.APP.colHeaders[this.S.table] || []);
+  }
+  else if (this.S.tab === 'sql') {
+    const defaultSQL = this.S.table ? `SELECT *\nFROM ${this.S.table}\nLIMIT 20;` : 'SHOW DATABASES;';
+    const displayHeaders = this.S.queryHeaders.length > 0 ? this.S.queryHeaders : (this.APP.colHeaders[this.S.table] || []);
 
-        let resHtml = '';
-        if (this.S.queryResult) {
-            resHtml = `<div style="margin-top:18px"><div class="section-title">Result <span class="badge">${this.S.queryResult.length} rows</span></div>
+    let resHtml = '';
+    if (this.S.queryResult) {
+      resHtml = `<div style="margin-top:18px"><div class="section-title">Result <span class="badge">${this.S.queryResult.length} rows</span></div>
            <div class="tbl-wrapper"><table class="data-tbl"><thead><tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
            <tbody>${this.S.queryResult.map(r => `<tr>${r.map(c => `<td>${c !== null ? c : '<span class="null-val">NULL</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-        }
-        p.innerHTML = `${msgHtml}<div class="section-title">SQL Query Editor</div>
+    }
+    p.innerHTML = `${msgHtml}<div class="section-title">SQL Query Editor</div>
           <textarea class="sql-editor" id="sql-input">${defaultSQL}</textarea>
           <button class="btn primary" style="margin-top:10px" onclick="window._dbm.runQuery()">▶ Execute</button>
           ${resHtml}`;
-    }
+  }
 }

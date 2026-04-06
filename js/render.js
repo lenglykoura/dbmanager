@@ -291,20 +291,28 @@ export function renderPanel() {
     // const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
     // if (this.S.page > totalPages) this.S.page = totalPages;
 
+
+    // const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
+
+
+
+    // --- UPDATED: Use the server-side total count ---
     const total = this.S.totalRows || 0;
     const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
 
-    // Use the raw data from the server directly since it's already paginated
+    // --- UPDATED: Prepare rows directly (API already handles filtering/sorting/paging) ---
     const pageRowsWithIndex = (this.APP.tableData[this.S.table] || []).map((row, i) => ({
       row,
       originalIndex: i
     }));
 
-    const start = (this.S.page - 1) * this.S.perPage;
-    // const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
-
+    // For the "Select All" checkbox logic
     const pageRowsIndices = pageRowsWithIndex.map(item => item.originalIndex);
     const allSelectedOnPage = pageRowsIndices.length > 0 && pageRowsIndices.every(idx => this.S.selected.has(idx));
+
+    // --- NEW: Calculate the "Showing X to Y" labels ---
+    const startCount = total === 0 ? 0 : (this.S.page - 1) * this.S.perPage + 1;
+    const endCount = Math.min(this.S.page * this.S.perPage, total);
 
     const schema = this.APP.schemas[this.S.table] || [];
     const pkIndex = schema.findIndex(c => c.x === 'PK');
@@ -437,12 +445,17 @@ export function renderPanel() {
                      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="margin-right:4px;"><path d="M1 3h14v2H1V3zm2 4h10v2H3V7zm3 4h4v2H6v-2z"/></svg>
                      Advanced Filter
                   </button>
-                  <span style="margin-right:14px;">${total} rows</span>
+                  
+                  <span style="margin-right:14px; font-size:12px; color:var(--text2);">
+                    Showing ${startCount.toLocaleString()} to ${endCount.toLocaleString()} of ${total.toLocaleString()} rows
+                  </span>
+
                   <button class="btn" onclick="window._dbm.changePage(-1)" ${this.S.page <= 1 ? 'disabled' : ''}>←</button>
                   <span style="margin: 0 8px;">Page ${this.S.page} / ${totalPages}</span>
                   <button class="btn" onclick="window._dbm.changePage(1)" ${this.S.page >= totalPages ? 'disabled' : ''}>→</button>
-                  <select class="search-input" style="width:70px; margin-left:14px;" onchange="window._dbm.setPerPage(this.value)">
-                      ${[15, 50, 100, 500].map(n => `<option ${this.S.perPage === n ? 'selected' : ''}>${n}</option>`).join('')}
+                  
+                  <select class="search-input" style="width:100px; margin-left:14px;" onchange="window._dbm.setPerPage(this.value)">
+                      ${[15, 50, 100, 500].map(n => `<option value="${n}" ${this.S.perPage === n ? 'selected' : ''}>${n} / page</option>`).join('')}
                   </select>
               </div>
           </div>

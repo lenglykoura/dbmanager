@@ -92,15 +92,18 @@ export function renderTerminal() {
   const body = document.getElementById('term-body');
   if (!body) return;
 
-  body.innerHTML = (this.S.logs || []).map(l => `
+  // Create a reversed copy of the logs so the newest is first
+  const reversedLogs = [...(this.S.logs || [])].reverse();
+
+  body.innerHTML = reversedLogs.map(l => `
         <div style="margin-bottom: 6px; color: ${l.type === 'error' ? '#ef4444' : '#10b981'};">
             <span style="color:#64748b; margin-right:8px; font-size:10px;">[${l.time}]</span> 
             <span style="font-family:var(--font-mono);">${l.msg}</span>
         </div>
     `).join('');
 
-  // Auto-scroll to the newest message at the bottom
-  body.scrollTop = body.scrollHeight;
+  // Auto-scroll to the top instead of the bottom
+  body.scrollTop = 0;
 }
 
 export function clearTerminal() {
@@ -351,18 +354,18 @@ export function renderPanel() {
                     </td>`;
         }
 
-        // --- 3. FORMATTING BY DATATYPE LOGIC ---
+        // --- FORMATTING BY DATATYPE LOGIC ---
         const isNumeric = tLower.includes('int') || tLower.includes('decimal') || tLower.includes('float') || tLower.includes('double');
         const align = isNumeric ? 'right' : 'left'; // Align numbers to the right
 
-        // --- AUTO-SAVE ON BLUR & ENTER KEY LOGIC ---
+        // --- DOUBLE-CLICK TO EDIT, CURSOR TO END, AUTO-SAVE LOGIC ---
         return `<td ${!isPk ?
-          `contenteditable="true" 
-             spellcheck="false" 
+          `spellcheck="false" 
              style="outline:none; text-align:${align}; transition: background 0.3s;" 
-             onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)" 
+             ondblclick="this.contentEditable='true'; this.focus(); const s=window.getSelection(); const r=document.createRange(); r.selectNodeContents(this); r.collapse(false); s.removeAllRanges(); s.addRange(r);"
+             onblur="this.contentEditable='false'; window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this);" 
              onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }" 
-             title="Click to edit"`
+             title="Double-click to edit"`
           :
           `style="opacity:0.6; cursor:not-allowed; text-align:${align};" title="Primary Key"`
           }>${c !== null ? c : ''}</td>`;

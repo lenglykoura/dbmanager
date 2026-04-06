@@ -661,33 +661,33 @@ body.light-theme {
   --bg2: #f1f5f9; /* Inputs and Hover states */
   --bg3: #e2e8f0; /* Active tab states */
   --bg4: #cbd5e1;
-  
+
   --line: #e2e8f0;
   --line2: #cbd5e1;
-  
+
   /* High contrast text */
   --text0: #0f172a; /* Deep slate/black */
-  --text1: #334155; 
-  --text2: #64748b; 
-  --text3: #94a3b8; 
-  
+  --text1: #334155;
+  --text2: #64748b;
+  --text3: #94a3b8;
+
   /* CRITICAL FIX: Darker semantic colors for a white background */
   --accent: #2563eb; /* Deeper Blue */
-  --green: #16a34a;  /* Darker Green for the Navbar Connection Pill */
-  --red: #dc2626;    /* Darker Red for the Logout Button / Delete */
-  --amber: #d97706;  
+  --green: #16a34a; /* Darker Green for the Navbar Connection Pill */
+  --red: #dc2626; /* Darker Red for the Logout Button / Delete */
+  --amber: #d97706;
   --cyan: #0891b2;
   --purple: #7c3aed;
 }
 
 /* Add a subtle shadow to the top navbar and sidebar in light mode for depth */
 body.light-theme #topbar {
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid var(--line);
 }
 
 body.light-theme #sidebar {
-  box-shadow: 1px 0 3px rgba(0,0,0,0.03);
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03);
 }
 
 /* --- Find this and fix the hardcoded color --- */
@@ -699,10 +699,10 @@ textarea.sql-editor {
   padding: 16px;
   background: var(--bg1);
   border: none;
-  
+
   /* CHANGE THIS LINE: */
-  color: var(--text0); 
-  
+  color: var(--text0);
+
   outline: none;
   resize: vertical;
   line-height: 1.7;
@@ -986,7 +986,6 @@ textarea.sql-editor {
   }
 }
 
-
 /* 1. Highlight text cells when clicking to edit */
 .data-tbl td[contenteditable="true"]:focus {
   outline: 2px solid var(--accent) !important;
@@ -994,6 +993,12 @@ textarea.sql-editor {
   background: var(--bg2) !important;
   border-radius: 2px;
   caret-color: var(--accent); /* Makes the blinking cursor blue */
+
+  /* --- NEW: Reveal full text on edit --- */
+  white-space: pre-wrap !important; /* Allows text to wrap to new lines */
+  overflow: visible !important; /* Stops hiding the text */
+  word-break: break-word; /* Prevents unbroken long strings from stretching the screen */
+  min-width: 150px; /* Gives you a bit of breathing room to type */
 }
 
 /* 2. Highlight dropdown cells when clicked */
@@ -1025,7 +1030,8 @@ textarea.sql-editor {
   transition: background 0.2s;
 }
 
-.col-resizer:hover, .col-resizer.resizing {
+.col-resizer:hover,
+.col-resizer.resizing {
   background: var(--accent);
   opacity: 0.8;
 }

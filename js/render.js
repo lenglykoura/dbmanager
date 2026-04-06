@@ -560,18 +560,102 @@ export function renderPanel() {
 
   }
   else if (this.S.tab === 'sql') {
-    const defaultSQL = this.S.table ? `SELECT *\nFROM ${this.S.table}\nLIMIT 20;` : 'SHOW DATABASES;';
+    const defaultSQL = this.S.table ? `SELECT *\nFROM ${this.S.table};` : 'SHOW DATABASES;';
     const displayHeaders = this.S.queryHeaders.length > 0 ? this.S.queryHeaders : (this.APP.colHeaders[this.S.table] || []);
 
     let resHtml = '';
     if (this.S.queryResult) {
-      resHtml = `<div style="margin-top:18px"><div class="section-title">Result <span class="badge">${this.S.queryResult.length} rows</span></div>
-           <div class="tbl-wrapper"><table class="data-tbl"><thead><tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-           <tbody>${this.S.queryResult.map(r => `<tr>${r.map(c => `<td>${c !== null ? c : '<span class="null-val">NULL</span>'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+      // --- NEW: Client-side pagination logic ---
+      const totalRows = this.S.queryResult.length;
+      const totalPages = Math.ceil(totalRows / this.S.perPage);
+
+      // Safety bounds check
+      if (this.S.page > totalPages && totalPages > 0) this.S.page = totalPages;
+      if (this.S.page < 1) this.S.page = 1;
+
+      const start = (this.S.page - 1) * this.S.perPage;
+      const pagedResults = this.S.queryResult.slice(start, start + this.S.perPage);
+
+      resHtml = `
+          <div style="margin-top:24px;">
+            
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <div class="section-title" style="margin:0;">Result <span class="badge">${totalRows} rows</span></div>
+                  
+                  <div style="display:flex; gap:8px;">
+                      <button class="btn success" onclick="window._dbm.exportQuery('csv')">↓ Export CSV</button>
+                      <button class="btn amber" onclick="window._dbm.exportQuery('json')">↓ Export JSON</button>
+                  </div>
+              </div>
+
+              ${totalRows > 0 ? `
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <div style="font-size:11px; color:var(--text2)">
+                      Showing ${start + 1} to ${Math.min(start + this.S.perPage, totalRows)} of ${totalRows} entries
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                      <button class="btn" onclick="window._dbm.changePage(-1)" ${this.S.page <= 1 ? 'disabled' : ''}>← Prev</button>
+                      <span style="font-size:11px; color:var(--text2)">Page ${this.S.page} of ${totalPages || 1}</span>
+                      <button class="btn" onclick="window._dbm.changePage(1)" ${this.S.page >= totalPages ? 'disabled' : ''}>Next →</button>
+                      <select class="search-input" style="padding:4px; width:auto;" onchange="window._dbm.setPerPage(this.value)">
+                          <option value="15" ${this.S.perPage === 15 ? 'selected' : ''}>15 / page</option>
+                          <option value="50" ${this.S.perPage === 50 ? 'selected' : ''}>50 / page</option>
+                          <option value="100" ${this.S.perPage === 100 ? 'selected' : ''}>100 / page</option>
+                          <option value="500" ${this.S.perPage === 500 ? 'selected' : ''}>500 / page</option>
+                      </select>
+                  </div>
+              </div>` : ''}
+              
+              <div class="tbl-wrapper">
+                  <table class="data-tbl">
+                      <thead><tr>${displayHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                      
+                      <tbody>${pagedResults.map(r => `<tr>${r.map(c => `<td>${c !== null ? c : '<span class="null-val">NULL</span>'}</td>`).join('')}</tr>`).join('')}</tbody>
+                  </table>
+              </div>
+          </div>`;
     }
-    p.innerHTML = `${msgHtml}<div class="section-title">SQL Query Editor</div>
-          <textarea class="sql-editor" id="sql-input">${defaultSQL}</textarea>
-          <button class="btn primary" style="margin-top:10px" onclick="window._dbm.runQuery()">▶ Execute</button>
+
+    // We wrap the textarea so we can style the border around CodeMirror
+    p.innerHTML = `<div class="section-title">SQL Query Editor</div>
+          <div style="border:1px solid var(--line); border-radius:4px; margin-bottom:12px; overflow:hidden;">
+              <textarea class="sql-editor" id="sql-input">${defaultSQL}</textarea>
+          </div>
+          <button id="run-query-btn" class="btn primary" onclick="window._dbm.runQuery()">▶ Execute</button>
           ${resHtml}`;
+
+    // Initialize CodeMirror immediately after drawing the UI
+    setTimeout(() => {
+      const ta = document.getElementById('sql-input');
+      if (!ta) return;
+
+      // 1. Build the dictionary of Tables & Columns for the Autocomplete
+      const hintTables = {};
+      const dbInfo = this.APP.databases[this.S.db];
+      if (dbInfo && dbInfo.tables) {
+        dbInfo.tables.forEach(t => {
+          hintTables[t] = this.APP.colHeaders[t] || [];
+        });
+      }
+
+      // 2. Attach CodeMirror
+      this.editor = CodeMirror.fromTextArea(ta, {
+        mode: "text/x-mysql",
+        theme: this.S.theme === 'dark' ? 'dracula' : 'default',
+        lineNumbers: true,
+        indentWithTabs: true,
+        smartIndent: true,
+        extraKeys: { "Ctrl-Space": "autocomplete" },
+        hintOptions: { tables: hintTables }
+      });
+
+      // 3. Make suggestions pop up automatically as you type
+      this.editor.on("keyup", function (cm, event) {
+        const ignoreKeys = [13, 8, 9, 32, 37, 38, 39, 40, 27]; // Enter, Backspace, Space, Arrows, Esc
+        if (!ignoreKeys.includes(event.keyCode) && !cm.state.completionActive) {
+          CodeMirror.commands.autocomplete(cm, null, { completeSingle: false });
+        }
+      });
+    }, 50);
   }
 }

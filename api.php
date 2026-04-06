@@ -266,6 +266,39 @@ try {
                 echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             }
             break;
+        case 'run_query':
+            $pdo = getDB();
+            $sql = $input['query'] ?? ''; // Match the variable sent by JavaScript
+            $db = $input['db'] ?? '';
+
+            if ($db) {
+                $pdo->exec("USE `$db`");
+            }
+
+            $stmt = $pdo->query($sql);
+
+            $data = [];
+            $headers = [];
+
+            // Only attempt to fetch results if it is a SELECT query
+            if ($stmt->columnCount() > 0) {
+                // Fetch numeric array for the frontend data table
+                $data = $stmt->fetchAll(PDO::FETCH_NUM);
+
+                // Extract the column header names dynamically
+                for ($i = 0; $i < $stmt->columnCount(); $i++) {
+                    $meta = $stmt->getColumnMeta($i);
+                    $headers[] = $meta['name'];
+                }
+            }
+
+            // Return the exact JSON structure the frontend is looking for
+            echo json_encode([
+                'success' => true,
+                'data' => $data,
+                'headers' => $headers
+            ]);
+            break;
         case 'get_indexes':
             $pdo = getDB();
             $db = $_GET['db'];

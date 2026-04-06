@@ -87,6 +87,18 @@ export async function loadDatabasesFromServer() {
 
 export async function loadTableDataFromServer(db, table) {
     if (!db || !table) return;
+
+    // --- NEW: Show loading screen immediately ---
+    const panel = document.getElementById('panel');
+    if (panel) {
+        // Uses the same CSS spinner we added previously, just scaled up a bit
+        panel.innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; color:var(--text2); font-family:var(--font-mono);">
+                <div class="spinner" style="width:24px; height:24px; border-width:3px; margin-bottom:16px;"></div>
+                <div>Fetching data for <span style="color:var(--accent); font-weight:bold;">${table}</span>...</div>
+            </div>`;
+    }
+
     try {
         const res = await fetch(`${this.apiUrl}?action=data&db=${encodeURIComponent(db)}&table=${encodeURIComponent(table)}`);
         const data = await res.json();
@@ -104,43 +116,58 @@ export async function loadTableDataFromServer(db, table) {
         this.APP.colHeaders[table] = data.schema.map(col => col.Field);
         this.APP.tableData[table] = data.data.map(row => this.APP.colHeaders[table].map(key => row[key]));
 
+        // Once the data finishes parsing, this redraws the UI and removes the loading screen
         this.renderSidebar();
         this.renderPanel();
         this.updateStatus();
-    } catch (error) { console.error(error); }
+    } catch (error) {
+        console.error(error);
+        if (panel) panel.innerHTML = `<div style="padding:24px; color:#ef4444;">Failed to load table data: ${error.message}</div>`;
+    }
 }
 
 export async function runQuery() {
-    const q = (document.getElementById('sql-input')?.value || '').trim();
-    if (!q) return;
+    const query = this.editor ? this.editor.getValue().trim() : document.getElementById('sql-input').value.trim();
+    if (!query) return this.showMsg("Query cannot be empty", "error");
+
+    // NEW: Find the button and set it to Loading mode
+    const btn = document.getElementById('run-query-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.style.cursor = 'wait';
+        btn.innerHTML = '<span class="spinner"></span> Executing...';
+    }
 
     try {
-        const res = await fetch(`${this.apiUrl}?action=query`, {
+        const res = await fetch(`${this.apiUrl}?action=run_query`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sql: q, db: this.S.db })
+            body: JSON.stringify({ db: this.S.db, query })
         });
+
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Query failed');
+        if (!data.success) throw new Error(data.error);
 
-        this.S.queryResult = data.results && data.results.length > 0 ? data.results : null;
-        if (this.S.queryResult) {
-            this.S.queryHeaders = Object.keys(this.S.queryResult[0]);
-            this.S.queryResult = this.S.queryResult.map(row => Object.values(row));
-            this.showMsg(`Query OK — ${this.S.queryResult.length} rows returned`);
-        } else {
-            this.S.queryHeaders = [];
-            this.showMsg(`Query OK — ${data.rowCount} rows affected`);
+        this.S.queryResult = data.data || [];
+        this.S.queryHeaders = data.headers || [];
+
+        this.S.page = 1; // <-- NEW: Reset to page 1 for new queries
+
+        this.showMsg(`Query executed successfully (${this.S.queryResult.length} rows)`);
+
+        // This redraws the panel, which automatically resets the button to normal!
+        this.renderPanel();
+
+    } catch (err) {
+        // NEW: If there is an error, turn the button back to normal so they can try again
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.innerHTML = '▶ Execute';
         }
-
-        this.renderPanel();
-        document.getElementById('sql-input').value = q;
-        if (q.toLowerCase().match(/^(create|drop|alter)/)) await this.loadDatabasesFromServer();
-    } catch (error) {
-        this.S.queryResult = null;
-        this.showMsg(error.message, 'error');
-        this.renderPanel();
-        document.getElementById('sql-input').value = q;
+        this.showMsg(err.message, "error");
     }
 }
 

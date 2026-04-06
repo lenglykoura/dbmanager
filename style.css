@@ -1035,3 +1035,61 @@ textarea.sql-editor {
   background: var(--accent);
   opacity: 0.8;
 }
+
+/* --- CODEMIRROR SQL EDITOR OVERRIDES --- */
+.CodeMirror {
+  height: auto;
+  min-height: 160px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--bg1) !important;
+  color: var(--text0) !important;
+}
+
+/* Fix heights and borders */
+.CodeMirror-scroll {
+  min-height: 160px;
+}
+.CodeMirror-gutters {
+  background: var(--bg2) !important;
+  border-right: 1px solid var(--line) !important;
+}
+
+/* Customizing the Autocomplete Dropdown */
+.CodeMirror-hints {
+  background: var(--bg1) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--text1) !important;
+  font-family: var(--font-mono) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 4px;
+  padding: 4px 0;
+}
+.CodeMirror-hint {
+  color: var(--text0) !important;
+  padding: 4px 12px !important;
+  font-size: 12px;
+}
+.CodeMirror-hint-active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+/* --- LOADING SPINNER --- */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s ease-in-out infinite;
+  margin-right: 6px;
+  vertical-align: text-bottom;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

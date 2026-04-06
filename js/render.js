@@ -64,8 +64,8 @@ export function showMsg(m, t = 'success') {
   // Memory protection: Keep only the latest 100 logs
   if (this.S.logs.length > 100) this.S.logs = this.S.logs.slice(-100);
 
-  // Auto-expand the terminal if it is currently hidden
-  if (!this.S.terminalOpen) {
+  // --- UPDATED: Only auto-expand if it is an ERROR ---
+  if (t === 'error' && !this.S.terminalOpen) {
     if (typeof this.toggleTerminal === 'function') {
       this.toggleTerminal();
     } else {
@@ -73,7 +73,7 @@ export function showMsg(m, t = 'success') {
     }
   }
 
-  // NEW: Save the updated logs to localStorage
+  // Save the updated logs to localStorage
   if (typeof this.saveLocalState === 'function') this.saveLocalState();
 
   this.renderTerminal();
@@ -287,12 +287,21 @@ export function renderPanel() {
       });
     }
 
-    const total = rowsWithIndex.length;
+    // const total = rowsWithIndex.length;
+    // const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
+    // if (this.S.page > totalPages) this.S.page = totalPages;
+
+    const total = this.S.totalRows || 0;
     const totalPages = Math.max(1, Math.ceil(total / this.S.perPage));
-    if (this.S.page > totalPages) this.S.page = totalPages;
+
+    // Use the raw data from the server directly since it's already paginated
+    const pageRowsWithIndex = (this.APP.tableData[this.S.table] || []).map((row, i) => ({
+      row,
+      originalIndex: i
+    }));
 
     const start = (this.S.page - 1) * this.S.perPage;
-    const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
+    // const pageRowsWithIndex = rowsWithIndex.slice(start, start + this.S.perPage);
 
     const pageRowsIndices = pageRowsWithIndex.map(item => item.originalIndex);
     const allSelectedOnPage = pageRowsIndices.length > 0 && pageRowsIndices.every(idx => this.S.selected.has(idx));

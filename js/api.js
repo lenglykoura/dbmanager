@@ -139,61 +139,30 @@ export async function runQuery() {
     }
 
     try {
-        // --- NEW: PRE-COUNT SAFETY CHECK ---
-        // Only run the check if it is a SELECT query
-        if (/^\s*SELECT/i.test(query)) {
-            // Strip trailing semicolons so the subquery doesn't break
-            const cleanQuery = query.replace(/;\s*$/, '');
-
-            // Wrap their query in a fast COUNT(*) statement
-            const countQuery = `SELECT COUNT(*) FROM (${cleanQuery}) AS _sub`;
-
-            const countRes = await fetch(`${this.apiUrl}?action=run_query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ db: this.S.db, query: countQuery })
-            });
-
-            const countData = await countRes.json();
-
-            // If the count query succeeded, check the number
-            if (countData.success && countData.data && countData.data.length > 0) {
-                const totalRows = parseInt(countData.data[0][0]); // Get the count integer
-
-                // If it's over 5,000 rows, show a warning prompt
-                if (totalRows > 5000) {
-                    const proceed = confirm(`⚠️ WARNING: This query will return ${totalRows.toLocaleString()} rows.\n\nDownloading this much data at once might slow down or crash your browser.\n\nDo you want to proceed anyway? (Adding a LIMIT clause is recommended)`);
-
-                    if (!proceed) {
-                        throw new Error("Query cancelled by user.");
-                    }
-                    // If they say yes, let them know it might take a while
-                    this.showMsg(`Proceeding to fetch ${totalRows.toLocaleString()} rows. This may take a moment...`, 'amber');
-                }
-            }
-        }
-
-        // --- ACTUAL QUERY EXECUTION ---
         const res = await fetch(`${this.apiUrl}?action=run_query`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ db: this.S.db, query: query })
+            body: JSON.stringify({
+                db: this.S.db,
+                query: query,
+                page: this.S.page,         // Send current page
+                per_page: this.S.perPage    // Send rows per page
+            })
         });
 
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
 
+        // Update state with paged data and total count
         this.S.queryResult = data.data || [];
         this.S.queryHeaders = data.headers || [];
-        this.S.page = 1; // Reset to page 1 for new queries
+        this.S.totalRows = data.totalRows || 0; // Use this for pagination UI
 
-        this.showMsg(`Query executed successfully (${this.S.queryResult.length} rows)`);
+        this.showMsg(`Showing ${this.S.queryResult.length} of ${this.S.totalRows.toLocaleString()} rows`);
 
-        // Redraws the panel and resets the button
         this.renderPanel();
 
     } catch (err) {
-        // Revert button state on error or cancellation
         if (btn) {
             btn.disabled = false;
             btn.style.opacity = '1';

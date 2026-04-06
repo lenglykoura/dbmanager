@@ -268,35 +268,38 @@ try {
             break;
         case 'run_query':
             $pdo = getDB();
-            $sql = $input['query'] ?? ''; // Match the variable sent by JavaScript
+            $sql = $input['query'] ?? '';
             $db = $input['db'] ?? '';
+            $page = isset($input['page']) ? (int)$input['page'] : 1;
+            $perPage = isset($input['per_page']) ? (int)$input['per_page'] : 15;
+            $offset = ($page - 1) * $perPage;
 
-            if ($db) {
-                $pdo->exec("USE `$db`");
-            }
+            if ($db) $pdo->exec("USE `$db`");
 
-            $stmt = $pdo->query($sql);
+            // 1. Get total count by wrapping the user's query
+            $cleanSql = rtrim(trim($sql), ';');
+            $countSql = "SELECT COUNT(*) FROM ($cleanSql) AS _total";
+            $totalRows = (int)$pdo->query($countSql)->fetchColumn();
+
+            // 2. Fetch only the current page of data
+            $pagedSql = "$cleanSql LIMIT $perPage OFFSET $offset";
+            $stmt = $pdo->query($pagedSql);
 
             $data = [];
             $headers = [];
-
-            // Only attempt to fetch results if it is a SELECT query
             if ($stmt->columnCount() > 0) {
-                // Fetch numeric array for the frontend data table
                 $data = $stmt->fetchAll(PDO::FETCH_NUM);
-
-                // Extract the column header names dynamically
                 for ($i = 0; $i < $stmt->columnCount(); $i++) {
                     $meta = $stmt->getColumnMeta($i);
                     $headers[] = $meta['name'];
                 }
             }
 
-            // Return the exact JSON structure the frontend is looking for
             echo json_encode([
                 'success' => true,
                 'data' => $data,
-                'headers' => $headers
+                'headers' => $headers,
+                'totalRows' => $totalRows // Send total count back to frontend
             ]);
             break;
         case 'get_indexes':

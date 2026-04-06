@@ -126,13 +126,15 @@ export function exportSelected(format) {
 
 export function changePage(delta) {
     this.S.page += delta;
-    this.renderPanel();
+    // --- NEW: Trigger server fetch ---
+    this.loadTableDataFromServer(this.S.db, this.S.table);
 }
 
 export function setPerPage(val) {
     this.S.perPage = parseInt(val);
     this.S.page = 1;
-    this.renderPanel();
+    // --- NEW: Trigger server fetch ---
+    this.loadTableDataFromServer(this.S.db, this.S.table);
 }
 
 export function selectDb(db) {

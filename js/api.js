@@ -11,6 +11,7 @@ export async function doLogin() {
             body: JSON.stringify({ host, user, password, database })
         });
         const data = await res.json();
+        this.APP.fkOptions = data.fks || {};
         if (!res.ok) throw new Error(data.error);
 
         this.S.user = user;
@@ -114,7 +115,7 @@ export async function loadTableDataFromServer(db, table) {
             `&sorts=${encodeURIComponent(sStr)}`;
 
         // 4. Fetch the data from the server
-        const res = await fetch(url);
+        const res = await fetch(`${this.apiUrl}?action=data&db=${encodeURIComponent(db)}&table=${encodeURIComponent(table)}`);
         const data = await res.json();
 
         if (!res.ok) throw new Error(data.error || 'Failed to fetch table data');

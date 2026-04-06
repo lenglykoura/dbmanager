@@ -317,17 +317,30 @@ export function renderPanel() {
     const schema = this.APP.schemas[this.S.table] || [];
     const pkIndex = schema.findIndex(c => c.x === 'PK');
 
+    // Generate background datalists for searchable inputs
     let dataListsHtml = '';
-    if (this.APP.fkOptions && this.APP.fkOptions[this.S.table]) {
-      Object.entries(this.APP.fkOptions[this.S.table]).forEach(([colName, opts]) => {
+    const currentTableFks = (this.APP.fkOptions && this.APP.fkOptions[this.S.table]) ? this.APP.fkOptions[this.S.table] : {};
+
+    Object.entries(currentTableFks).forEach(([colName, opts]) => {
+      // Safety check: ensure opts is actually an array before calling forEach
+      if (Array.isArray(opts)) {
         dataListsHtml += `<datalist id="fk-list-${colName}">`;
         opts.forEach(opt => {
           const display = opt.val == opt.label ? opt.val : `${opt.label} (ID: ${opt.val})`;
           dataListsHtml += `<option value="${opt.val}">${display}</option>`;
         });
         dataListsHtml += `</datalist>`;
-      });
-    }
+      }
+    });
+    // if (this.APP.fkOptions) {
+    //   Object.entries(this.APP.fkOptions).forEach(([colName, opts]) => {
+    //     dataListsHtml += `<datalist id="fk-list-${colName}">`;
+    //     opts.forEach(opt => {
+    //       dataListsHtml += `<option value="${opt.val}">${opt.label} (ID: ${opt.val})</option>`;
+    //     });
+    //     dataListsHtml += `</datalist>`;
+    //   });
+    // }
 
     const tbodyHtml = pageRowsWithIndex.map((item, localIdx) => {
       const r = item.row;
@@ -349,11 +362,11 @@ export function renderPanel() {
 
         if (fkOpts) {
           return `<td style="padding:0; min-width:140px;">
-                      <input type="text" list="fk-list-${colDef.n}" value="${c !== null ? c : ''}" placeholder="${colDef.null ? 'NULL' : ''}"
-                          onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)"
-                          onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
-                          style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit;">
-                  </td>`;
+              <input type="text" list="fk-list-${colDef.n}" value="${c !== null ? c : ''}" 
+                  onblur="window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)"
+                  onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
+                  style="width:100%; height:100%; padding:8px 12px; background:transparent; border:none; outline:none; color:var(--purple); font-family:inherit; font-size:inherit;">
+          </td>`;
         }
 
         // --- 2. ENUM DROPDOWN LOGIC ---

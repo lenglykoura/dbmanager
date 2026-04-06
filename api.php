@@ -71,26 +71,23 @@ try {
             $db = $_GET['db'] ?? '';
             $table = $_GET['table'] ?? '';
 
-            // --- 1. PAGINATION PARAMETERS ---
+            // 1. Get Pagination, Filter, and Sort parameters from URL
             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
             $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 15;
             $offset = ($page - 1) * $perPage;
 
-            // --- 2. FILTER & SORT PARAMETERS ---
             $filters = isset($_GET['filters']) ? json_decode($_GET['filters'], true) : [];
             $sorts = isset($_GET['sorts']) ? json_decode($_GET['sorts'], true) : [];
 
-            $pdo->exec("USE `$db`");
+            $pdo->exec("USE `$db` ");
 
-            // --- 3. BUILD DYNAMIC WHERE CLAUSE ---
+            // 2. Build Dynamic WHERE Clause (Filtering)
             $whereParts = [];
             $params = [];
             foreach ($filters as $f) {
                 if (!isset($f['active']) || !$f['active'] || empty($f['col']) || empty($f['op'])) continue;
-
                 $col = $f['col'];
                 $val = $f['val'];
-
                 switch ($f['op']) {
                     case '=':
                         $whereParts[] = "`$col` = ?";
@@ -138,7 +135,7 @@ try {
             }
             $whereSql = count($whereParts) > 0 ? "WHERE " . implode(" AND ", $whereParts) : "";
 
-            // --- 4. BUILD DYNAMIC ORDER BY CLAUSE ---
+            // 3. Build Dynamic ORDER BY Clause (Sorting)
             $orderParts = [];
             foreach ($sorts as $s) {
                 if (empty($s['col'])) continue;
@@ -147,38 +144,31 @@ try {
             }
             $orderSql = count($orderParts) > 0 ? "ORDER BY " . implode(", ", $orderParts) : "";
 
-            // --- 5. GET FILTERED TOTAL COUNT ---
+            // 4. Get total count for pagination UI
             $countStmt = $pdo->prepare("SELECT COUNT(*) FROM `$table` $whereSql");
             $countStmt->execute($params);
             $totalRows = (int)$countStmt->fetchColumn();
 
-            // --- 6. FETCH SCHEMA (COLUMNS) ---
-            $stmtSchema = $pdo->query("SHOW FULL COLUMNS FROM `$table`");
+            // 5. Fetch Schema
+            $stmtSchema = $pdo->query("SHOW FULL COLUMNS FROM `$table` ");
             $schema = $stmtSchema->fetchAll(PDO::FETCH_ASSOC);
 
-            // --- 7. FETCH PAGINATED DATA ---
+            // 6. Fetch actual paginated, filtered, and sorted data
             $sqlData = "SELECT * FROM `$table` $whereSql $orderSql LIMIT $perPage OFFSET $offset";
             $stmtData = $pdo->prepare($sqlData);
             $stmtData->execute($params);
             $data = $stmtData->fetchAll(PDO::FETCH_ASSOC);
 
-            // --- 8. FETCH FOREIGN KEY OPTIONS ---
-            $fkStmt = $pdo->prepare("
-                SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-                FROM information_schema.KEY_COLUMN_USAGE
-                WHERE REFERENCED_TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
-            ");
+            // 7. Foreign Key Logic (Keep your existing FK logic here...)
+            $fkStmt = $pdo->prepare("SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE REFERENCED_TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL");
             $fkStmt->execute([$db, $table]);
             $fks = $fkStmt->fetchAll(PDO::FETCH_ASSOC);
-
             $fkOptions = [];
             foreach ($fks as $fk) {
                 $colName = $fk['COLUMN_NAME'];
                 $refTable = $fk['REFERENCED_TABLE_NAME'];
                 $refCol = $fk['REFERENCED_COLUMN_NAME'];
-
-                // Try to find a descriptive column (name/title) for better dropdown labels
-                $refColsStmt = $pdo->query("SHOW COLUMNS FROM `$refTable`");
+                $refColsStmt = $pdo->query("SHOW COLUMNS FROM `$refTable` ");
                 $refCols = $refColsStmt->fetchAll(PDO::FETCH_ASSOC);
                 $displayCol = $refCol;
                 foreach ($refCols as $rc) {
@@ -187,18 +177,12 @@ try {
                         break;
                     }
                 }
-
                 $optsStmt = $pdo->query("SELECT `$refCol` as val, `$displayCol` as label FROM `$refTable` LIMIT 1000");
                 $fkOptions[$colName] = $optsStmt->fetchAll(PDO::FETCH_ASSOC);
             }
 
-            // --- 9. RETURN JSON PAYLOAD ---
-            echo json_encode([
-                'schema' => $schema,
-                'data' => $data,
-                'totalRows' => $totalRows,
-                'fks' => $fkOptions
-            ]);
+            // 8. Return everything including totalRows
+            echo json_encode(['schema' => $schema, 'data' => $data, 'totalRows' => $totalRows, 'fks' => $fkOptions]);
             break;
         case 'update_cell':
             $pdo = getDB();

@@ -381,7 +381,7 @@ export function renderPanel() {
           const displayLabel = opt ? opt.label : (c !== null ? c : '');
 
           return `<td 
-              style="outline:none; color:var(--purple); cursor:pointer; min-width:140px;" 
+              style="outline:none; color:var(--accent2); cursor:pointer; min-width:140px;"
               ondblclick="
                   this.innerHTML = '<input type=\\'text\\' list=\\'fk-list-${colDef.n}\\' value=\\'${c !== null ? c : ''}\\' onblur=\\'window._dbm.saveCell(${actualRowIndex}, ${cIdx}, this)\\' onkeydown=\\'if(event.key === \\'Enter\\') { event.preventDefault(); this.blur(); }\\' style=\\'width:100%; height:100%; padding:8px 12px; background:var(--bg2); border:none; outline:none; color:inherit; font-family:inherit; font-size:inherit;\\'>';
                   this.querySelector('input').focus();

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DBManager: free, open-source phpMyAdmin alternative for MySQL &amp; MariaDB</title>
+  <meta name="description" content="DBManager is a free, open-source, web-based MySQL and MariaDB manager: a lightweight phpMyAdmin alternative with a Navicat-style layout. Browse and edit data, design tables, run SQL, and export huge databases with gzip. PHP 8 + vanilla JS, no build step.">
+  <meta name="keywords" content="phpMyAdmin alternative, MySQL manager, MariaDB manager, web database admin, MySQL GUI, database management tool, PHP MySQL admin, open source, Navicat alternative">
+  <meta name="author" content="Leng Lykoura">
+  <link rel="canonical" href="https://lenglykoura.github.io/dbmanager/">
+
+  <!-- Link previews (Facebook, Telegram, LinkedIn, X) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="DBManager: open-source phpMyAdmin alternative for MySQL & MariaDB">
+  <meta property="og:description" content="Browse, edit, design, query and export MySQL/MariaDB databases from your browser. Free, lightweight, no build step.">
+  <meta property="og:url" content="https://lenglykoura.github.io/dbmanager/">
+  <meta name="twitter:card" content="summary">
+
+  <!-- Tells Google this page is about a piece of software -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "DBManager",
+    "description": "Free, open-source web-based MySQL and MariaDB database manager: a lightweight phpMyAdmin alternative.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any (PHP 8 web server)",
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://lenglykoura.github.io/dbmanager/",
+    "codeRepository": "https://github.com/lenglykoura/dbmanager",
+    "author": { "@type": "Person", "name": "Leng Lykoura" },
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff; --bg2: #f6f8fb; --card: #ffffff; --line: #e3e8ef;
+      --text: #0f172a; --text2: #475569; --text3: #7a8699;
+      --accent: #2563eb; --accent-soft: #e8efff; --code-bg: #0f172a; --code-text: #e2e8f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0b0f17; --bg2: #111725; --card: #121a29; --line: #232d40;
+        --text: #e6ebf3; --text2: #a3afc2; --text3: #7b879b;
+        --accent: #5b8cff; --accent-soft: #17223a; --code-bg: #070a10; --code-text: #d7deea;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0b0f17; --bg2: #111725; --card: #121a29; --line: #232d40;
+      --text: #e6ebf3; --text2: #a3afc2; --text3: #7b879b;
+      --accent: #5b8cff; --accent-soft: #17223a; --code-bg: #070a10; --code-text: #d7deea;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; line-height: 1.6;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+    header.top { border-bottom: 1px solid var(--line); }
+    header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .brand { font-weight: 800; font-size: 18px; color: var(--text); text-decoration: none; }
+    .brand span { color: var(--accent); }
+    .top nav a { margin-left: 18px; color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .top nav a:hover { color: var(--text); }
+
+    .hero { padding: 72px 0 56px; text-align: center; }
+    .hero h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero p.lead { font-size: clamp(16px, 2.2vw, 19px); color: var(--text2); max-width: 720px; margin: 0 auto 28px; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px;
+      font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid var(--line); color: var(--text); background: var(--card);
+    }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn:hover { filter: brightness(1.05); }
+    .badges { margin-top: 22px; color: var(--text3); font-size: 13px; }
+    .badges span { display: inline-block; margin: 4px 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg2); border: 1px solid var(--line); }
+
+    section { padding: 56px 0; }
+    section.alt { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    h2 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.01em; }
+    p.sub { color: var(--text2); margin: 0 0 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .card h3 { margin: 0 0 6px; font-size: 16px; }
+    .card p { margin: 0; color: var(--text2); font-size: 14.5px; }
+    .card .ico { width: 34px; height: 34px; border-radius: 8px; background: var(--accent-soft); color: var(--accent);
+      display: flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 12px; font-size: 16px; }
+
+    pre {
+      background: var(--code-bg); color: var(--code-text); padding: 18px 20px; border-radius: 12px; overflow-x: auto;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 14px; line-height: 1.7; margin: 0 0 16px;
+    }
+    pre .c { color: #7f8ea8; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+    .steps ol { margin: 0; padding-left: 20px; color: var(--text2); }
+    .steps li { margin-bottom: 8px; }
+    code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.92em; }
+
+    table.compare { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14.5px; }
+    .compare th, .compare td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+    .compare th { background: var(--bg2); font-weight: 600; }
+    .compare td:not(:first-child), .compare th:not(:first-child) { text-align: center; width: 22%; }
+    .compare tr:last-child td { border-bottom: none; }
+    .yes { color: #16a34a; font-weight: 700; }
+    .no { color: var(--text3); }
+    .table-scroll { overflow-x: auto; }
+
+    footer { padding: 32px 0 48px; color: var(--text3); font-size: 14px; text-align: center; }
+    @media (max-width: 600px) {
+      .top nav a:not(.gh) { display: none; }
+      .hero { padding: 48px 0 40px; }
+      section { padding: 40px 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./">DB<span>Manager</span></a>
+      <nav aria-label="Main">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#compare">Compare</a>
+        <a class="gh" href="https://github.com/lenglykoura/dbmanager">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <h1>A free, open-source <em>phpMyAdmin alternative</em> for MySQL &amp; MariaDB</h1>
+        <p class="lead">DBManager is a fast, lightweight web-based database manager with a Navicat-style layout. Browse and edit data, design tables, run SQL and export huge databases from your browser, with no framework and no build step.</p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/lenglykoura/dbmanager">View on GitHub</a>
+          <a class="btn" href="https://github.com/lenglykoura/dbmanager/archive/refs/heads/main.zip">Download ZIP</a>
+        </div>
+        <div class="badges"><span>MIT licensed</span><span>PHP 8+</span><span>MySQL 5.7 / 8 · MariaDB 10.3+</span><span>No Composer · No npm</span></div>
+      </div>
+    </div>
+
+    <section id="features" class="alt">
+      <div class="wrap">
+        <h2>Everything you need to manage a database</h2>
+        <p class="sub">Built for everyday work on real databases: hundreds of tables, millions of rows.</p>
+        <div class="grid">
+          <div class="card"><div class="ico">▤</div><h3>Navicat-style objects view</h3><p>A grid of every table and view with rows, sizes, engine and collation. Open, design, rename, duplicate, empty or drop from a toolbar or right-click menu.</p></div>
+          <div class="card"><div class="ico">✎</div><h3>Edit data in place</h3><p>Double-click any cell. Dates get a date picker, numbers are checked as you type, ENUMs get a dropdown, and foreign keys show names instead of bare IDs.</p></div>
+          <div class="card"><div class="ico">⌕</div><h3>Filter &amp; sort</h3><p>Contains, between, is empty, is NULL, match all or any, multi-column sort, plus a quick filter row under the headers.</p></div>
+          <div class="card"><div class="ico">⚙</div><h3>Table designer</h3><p>Add, edit, move and drop columns; manage indexes and foreign keys with ON DELETE / ON UPDATE rules; see which tables reference this one.</p></div>
+          <div class="card"><div class="ico">&gt;_</div><h3>SQL editor like phpMyAdmin</h3><p>Syntax colours, autocomplete for every column, SELECT/INSERT/UPDATE/DELETE templates, a formatter, query history, and editable results for single-table SELECTs.</p></div>
+          <div class="card"><div class="ico">⇩</div><h3>Export any size, with gzip</h3><p>SQL, CSV or JSON, streamed while it is built, so a 1 GB database exports with little memory. Gzip on the fly for downloads 5–10× smaller.</p></div>
+          <div class="card"><div class="ico">⇧</div><h3>Import and backups</h3><p>Import .sql, .csv, .json or .gz files with a preview first. One-click server backups you can download, restore or delete.</p></div>
+          <div class="card"><div class="ico">◐</div><h3>Comfortable everywhere</h3><p>Dark and light themes, works on phones, and every view is a link you can open in a new tab or bookmark.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <h2>Up and running in a minute</h2>
+        <p class="sub">Any PHP 8 web server with <code>pdo_mysql</code> works: Laragon, Herd, XAMPP, Apache or Nginx.</p>
+        <div class="steps">
+          <div>
+<pre><span class="c"># get the code</span>
+git clone https://github.com/lenglykoura/dbmanager.git
+cd dbmanager
+
+<span class="c"># start PHP's built-in server</span>
+php -S localhost:8000</pre>
+          </div>
+          <ol>
+            <li>Open <code>http://localhost:8000</code> in your browser.</li>
+            <li>Log in with your MySQL / MariaDB host, user and password.</li>
+            <li>Pick a database in the sidebar and start working.</li>
+            <li>Or copy the folder into your web root, e.g. <code>C:\laragon\www\dbmanager</code> → <code>http://dbmanager.test</code>.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="alt">
+      <div class="wrap">
+        <h2>How it compares</h2>
+        <p class="sub">DBManager is a small, self-hosted tool: one folder, no installer.</p>
+        <div class="table-scroll">
+          <table class="compare">
+            <thead><tr><th>Feature</th><th>DBManager</th><th>phpMyAdmin</th><th>Navicat</th></tr></thead>
+            <tbody>
+              <tr><td>Free and open source</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">Paid</td></tr>
+              <tr><td>Runs in the browser</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">Desktop app</td></tr>
+              <tr><td>Navicat-style objects grid</td><td class="yes">✓</td><td class="no">–</td><td class="yes">✓</td></tr>
+              <tr><td>Foreign keys shown as names</td><td class="yes">✓</td><td class="no">Partly</td><td class="yes">✓</td></tr>
+              <tr><td>Streamed, gzipped export</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      DBManager is free software under the <a href="https://github.com/lenglykoura/dbmanager/blob/main/LICENSE">MIT license</a>,
+      made by <a href="https://github.com/lenglykoura">Leng Lykoura</a>.
+      <br><a href="https://github.com/lenglykoura/dbmanager">Source code</a> ·
+      <a href="https://github.com/lenglykoura/dbmanager/issues">Report an issue</a>
+    </div>
+  </footer>
+</body>
+</html>

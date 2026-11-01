@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DB Manager</title>
+    <link rel="icon" href="/image/icon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/show-hint.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css"
+    />
+    <!--
+      Cache busting: the web server tells browsers to keep JS and CSS for 12 hours,
+      so after changing style.css or any file in js/, bump every "?v=" in this file (style.css lives in css/)
+      (same value everywhere) or the browser keeps running the old copy.
+    -->
+    <link rel="stylesheet" href="css/style.css?v=42" />
+  </head>
+  <body>
+    <div id="db-app"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/hint/sql-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/runmode/runmode.min.js"></script>
+    <!-- Applies the version to the modules app.js imports, and to their imports. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "./js/actions.js": "./js/actions.js?v=42",
+          "./js/api.js": "./js/api.js?v=42",
+          "./js/cellinput.js": "./js/cellinput.js?v=42",
+          "./js/dbtree.js": "./js/dbtree.js?v=42",
+          "./js/dialog.js": "./js/dialog.js?v=42",
+          "./js/export.js": "./js/export.js?v=42",
+          "./js/filters.js": "./js/filters.js?v=42",
+          "./js/objects.js": "./js/objects.js?v=42",
+          "./js/relations.js": "./js/relations.js?v=42",
+          "./js/router.js": "./js/router.js?v=42",
+          "./js/render.js": "./js/render.js?v=42",
+          "./js/sqleditor.js": "./js/sqleditor.js?v=42",
+          "./js/structure.js": "./js/structure.js?v=42",
+          "./js/util.js": "./js/util.js?v=42"
+        }
+      }
+    </script>
+    <script type="module" src="js/app.js?v=42"></script>
+  </body>
+</html>
